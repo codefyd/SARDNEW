@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -974,9 +975,72 @@
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbzEymYho4AuaRBose9ZxpSKRBY6B-vOZKMhwGP3e4UovZfXgVqdEHIyt7V-Znf6KIfN/exec";
+const API = "https://script.google.com/macros/s/AKfycbxfAz3YTvh9okkdxDkqjet_mlrK19ngI1KG1CCJObmIYE1_Ao2qKQHpyIqO9eTCFOjRZA/exec";
 
+function _buildUrl(action, params = {}) {
+  const url = new URL(API);
+  url.searchParams.set('action', action);
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+  });
+  return url.toString();
+}
 
+async function _apiGet(action, params = {}) {
+  const res = await fetch(_buildUrl(action, params), {
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'omit'
+  });
+
+  const text = await res.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (err) {
+    throw new Error('استجابة غير صالحة من الخادم');
+  }
+
+  if (!res.ok || (data && data.error)) {
+    throw new Error((data && data.error) || ('HTTP ' + res.status));
+  }
+
+  return data;
+}
+
+async function _apiPost(action, payload = {}) {
+  const body = new URLSearchParams();
+  body.set('action', action);
+  body.set('payload', JSON.stringify(payload || {}));
+
+  const res = await fetch(API, {
+    method: 'POST',
+    mode: 'cors',
+    credentials: 'omit',
+    body
+  });
+
+  const text = await res.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (err) {
+    throw new Error('استجابة غير صالحة من الخادم');
+  }
+
+  if (!res.ok || (data && data.error)) {
+    throw new Error((data && data.error) || ('HTTP ' + res.status));
+  }
+
+  return data;
+}
+
+class _GSCall {
+  constructor() {
+    this._ok = null;
+    this._err = null;
+  }
   withSuccessHandler(fn) { this._ok = fn; return this; }
   withFailureHandler(fn) { this._err = fn; return this; }
   _resolve(promise) {
@@ -984,6 +1048,9 @@ const API = "https://script.google.com/macros/s/AKfycbzEymYho4AuaRBose9ZxpSKRBY6
       .then(d => { if (this._ok) this._ok(d); })
       .catch(e => { if (this._err) this._err(e); });
   }
+  initData()               { this._resolve(_apiGet('initData')); }
+  getStudents()            { this._resolve(_apiGet('getStudents')); }
+  getRecords()             { this._resolve(_apiGet('getRecords')); }
   getData()                { this._resolve(_apiGet('getData')); }
   saveRecord(r)            { this._resolve(_apiPost('saveRecord', r)); }
   saveSettings(s)          { this._resolve(_apiPost('saveSettings', s)); }
@@ -1009,44 +1076,6 @@ const google = {
   }
 };
 
-);
-
-    url.searchParams.set('prefix', callbackName);
-
-    let finished = false;
-    const cleanup = () => {
-      try { delete window[callbackName]; } catch (e) {}
-      if (script.parentNode) script.parentNode.removeChild(script);
-    };
-
-    window[callbackName] = function(data) {
-      if (finished) return;
-      finished = true;
-      cleanup();
-      if (data && data.error) reject(new Error(data.error));
-      else resolve(data);
-    };
-
-    script.onerror = function() {
-      if (finished) return;
-      finished = true;
-      cleanup();
-      reject(new Error('فشل طلب JSONP'));
-    };
-
-    script.src = url.toString();
-    document.body.appendChild(script);
-  });
-}
-
-function _apiGet(action, params = {}) {
-  return _jsonpRequest({ action, ...params });
-}
-
-function _apiPost(action, payload = {}) {
-  return _jsonpRequest({ action, payload: JSON.stringify(payload) });
-}
-
 // =============================================
 // STATE
 // =============================================
@@ -1065,7 +1094,9 @@ const STATE = {
   attHalaqa: null,
   attStatuses: {},
   settingsUnlocked: false,
-  attUnlocked: false
+  attUnlocked: false,
+  recordsLoaded: false,
+  recordsLoading: false
 };
 
 // =============================================
@@ -1092,14 +1123,19 @@ function showApp() {
 
 function loadData() {
   showSpinner();
-  google.script.run
-    .withSuccessHandler(data => {
-      STATE.settings     = data.settings || {};
-      STATE.trackConfigs = data.trackConfigs || [];
-      STATE.halaqas      = data.halaqas || [];
-      STATE.students     = data.students || [];
-      STATE.records      = data.records || [];
-      STATE.complex      = data.complex || {};
+  STATE.recordsLoaded = false;
+  STATE.recordsLoading = true;
+
+  Promise.all([
+    _apiGet('initData'),
+    _apiGet('getStudents')
+  ])
+    .then(([initData, studentsData]) => {
+      STATE.settings     = initData.settings || {};
+      STATE.trackConfigs = initData.trackConfigs || [];
+      STATE.complex      = initData.complex || {};
+      STATE.students     = studentsData.students || [];
+      STATE.halaqas      = studentsData.halaqas || [];
 
       const cn = STATE.complex.complexName || '';
       if (cn) document.getElementById('navComplexName').textContent = '— ' + cn;
@@ -1109,12 +1145,25 @@ function loadData() {
       loadSettingsForm();
       applyReportsButton();
       hideSpinner();
+
+      _apiGet('getRecords')
+        .then(recordsData => {
+          STATE.records = recordsData.records || [];
+          STATE.recordsLoaded = true;
+          STATE.recordsLoading = false;
+        })
+        .catch(err => {
+          STATE.recordsLoaded = false;
+          STATE.recordsLoading = false;
+          showToast('تم فتح التطبيق، لكن تعذر تحميل السجلات: ' + (err.message || err), 'warning');
+        });
     })
-    .withFailureHandler(err => {
+    .catch(err => {
+      STATE.recordsLoaded = false;
+      STATE.recordsLoading = false;
       hideSpinner();
       showToast('خطأ في تحميل البيانات: ' + (err.message || err), 'error');
-    })
-    .getData();
+    });
 }
 
 function doLogin() {
@@ -1285,6 +1334,10 @@ function selectStudent(id, btn) {
 // =============================================
 function startEvaluation() {
   if (!STATE.selStudent) return;
+  if (STATE.recordsLoading && !STATE.recordsLoaded) {
+    showToast('السجلات ما زالت تُحمّل في الخلفية، جرّب بعد لحظات.', 'info');
+    return;
+  }
   const student = STATE.students.find(s => s.id === STATE.selStudent);
   if (!student) return;
 
@@ -1808,24 +1861,21 @@ function doSaveRecord() {
     if (!r.isConfirmed) return;
     const today = new Date().toISOString().split('T')[0];
     showSpinner();
+    STATE.recordsLoading = true;
     google.script.run
       .withSuccessHandler(() => {
         hideSpinner();
         Swal.fire({ icon:'success', title:'تم الحفظ!', text:'تم حفظ نتيجة ' + (student.name || '') + ' بنجاح', confirmButtonColor:'#014979', confirmButtonText:'ممتاز' })
           .then(() => {
             // يبقى في صفحة الطالب — يُعيد تحميل البيانات ويُعيد رسم نفس الطالب
-            google.script.run
-              .withSuccessHandler(freshData => {
-                STATE.settings     = freshData.settings || STATE.settings;
-                STATE.trackConfigs = freshData.trackConfigs || STATE.trackConfigs;
-                STATE.halaqas      = freshData.halaqas || STATE.halaqas;
-                STATE.students     = freshData.students || STATE.students;
-                STATE.records      = freshData.records || STATE.records;
-                STATE.complex      = freshData.complex || STATE.complex;
+            _apiGet('getRecords')
+              .then(recordsData => {
+                STATE.records = recordsData.records || STATE.records;
+                STATE.recordsLoaded = true;
+                STATE.recordsLoading = false;
                 startEvaluation();
               })
-              .withFailureHandler(() => {})
-              .getData();
+              .catch(() => {});
           });
       })
       .withFailureHandler(err => { hideSpinner(); showToast('خطأ في الحفظ: ' + (err.message || err), 'error'); })
