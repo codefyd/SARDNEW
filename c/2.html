@@ -400,6 +400,8 @@ function loadData(opts){
 }
 
 function render(opts){
+  opts=opts||{};
+  var savedScroll = opts.preserveScroll ? window.scrollY : 0;
   if(!_data)return;
   var halaqas=_data.halaqas||[];
   var students=_data.students||[];
