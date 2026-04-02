@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -124,22 +125,20 @@
   <div class="spinner-wrap animate-in"><div class="spinner"></div><span class="text-muted">جاري تحميل التقرير...</span></div>
 </div>
 <script>
-const APP_CONFIG={API_URL:'https://tessst02.tea3fa.workers.dev'};
-const API=APP_CONFIG.API_URL;
+const API="https://script.google.com/macros/s/AKfycbxfvdCcCCZ2eh8LSMKqlllcCKcn0e6HunPkfc3Ue_IXP6rWdeHxrEaYafN60-sVVpcT/exec";
 
-async function apiRequest(action, params={}, method='GET'){
-  const u=new URL(API);
-  u.searchParams.set('action', action);
-  Object.keys(params||{}).forEach(function(k){
-    if(params[k]!==undefined && params[k]!==null)u.searchParams.set(k, String(params[k]));
+async function apiGet(action, params){
+  var url=new URL(API);
+  url.searchParams.set('action',action);
+  if(params)Object.keys(params).forEach(function(k){
+    if(params[k]!==undefined && params[k]!==null) url.searchParams.set(k,String(params[k]));
   });
-  const res=await fetch(u.toString(), {method:method});
-  if(!res.ok)throw new Error('فشل الاتصال ('+res.status+')');
-  const data=await res.json();
-  if(data && data.error)throw new Error(data.error);
+  url.searchParams.set('_ts', Date.now().toString());
+  var res=await fetch(url.toString(), { method:'GET', cache:'no-store' });
+  var data=await res.json();
+  if(!res.ok || (data && data.error)) throw new Error((data && data.error) || ('HTTP '+res.status));
   return data;
 }
-
 function fN(v){return Number(v||0).toLocaleString('en-US');}
 function fP(v){return Number(v||0).toLocaleString('en-US',{maximumFractionDigits:1});}
 function escH(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
@@ -235,7 +234,7 @@ function buildMiniTable(sections,partsDivisions){
 var _data=null, _sel='';
 function loadData(){
   setSpinner('app');
-  apiRequest('getDailySummary').then(function(d){_data=d;render();}).catch(function(e){
+  apiGet('getDailySummary').then(function(d){_data=d;render();}).catch(function(e){
     document.getElementById('app').innerHTML='<div class="card-sard" style="text-align:center;padding:32px;color:var(--danger);"><i class="fas fa-exclamation-circle" style="font-size:2rem;margin-bottom:8px;display:block;"></i>خطأ: '+escH(e.message||String(e))+'</div>';
   });
 }
