@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -139,19 +140,18 @@
 </div>
 
 <script>
-const APP_CONFIG={API_URL:'https://tessst02.tea3fa.workers.dev'};
-const API=APP_CONFIG.API_URL;
+const API="https://script.google.com/macros/s/AKfycbxfvdCcCCZ2eh8LSMKqlllcCKcn0e6HunPkfc3Ue_IXP6rWdeHxrEaYafN60-sVVpcT/exec";
 
-async function apiRequest(action, params={}, method='GET'){
-  const u=new URL(API);
-  u.searchParams.set('action', action);
-  Object.keys(params||{}).forEach(function(k){
-    if(params[k]!==undefined && params[k]!==null)u.searchParams.set(k, String(params[k]));
+async function apiGet(action, params){
+  var url=new URL(API);
+  url.searchParams.set('action',action);
+  if(params)Object.keys(params).forEach(function(k){
+    if(params[k]!==undefined && params[k]!==null) url.searchParams.set(k,String(params[k]));
   });
-  const res=await fetch(u.toString(), {method:method});
-  if(!res.ok)throw new Error('فشل الاتصال ('+res.status+')');
-  const data=await res.json();
-  if(data && data.error)throw new Error(data.error);
+  url.searchParams.set('_ts', Date.now().toString());
+  var res=await fetch(url.toString(), { method:'GET', cache:'no-store' });
+  var data=await res.json();
+  if(!res.ok || (data && data.error)) throw new Error((data && data.error) || ('HTTP '+res.status));
   return data;
 }
 
@@ -328,13 +328,25 @@ function buildStats(student,record){
 
 function loadData(){
   setSpinner('app');
-  apiRequest('getData').then(function(d){
-    _data=d;
-    if(d&&d.halaqas&&d.halaqas.length&&!_selH)_selH=d.halaqas[0].name;
-    if(_selH&&d&&d.students){
-      var inH=d.students.filter(function(s){return s.halaqa===_selH;});
+  Promise.all([apiGet('initData'), apiGet('getStudents')]).then(function(res){
+    var init=res[0]||{}, studentsData=res[1]||{};
+    _data={
+      settings:init.settings||{},
+      trackConfigs:init.trackConfigs||[],
+      complex:init.complex||{},
+      halaqas:studentsData.halaqas||[],
+      students:studentsData.students||[],
+      records:[]
+    };
+    if(_data.halaqas.length&&!_selH)_selH=_data.halaqas[0].name;
+    if(_selH&&_data.students){
+      var inH=_data.students.filter(function(s){return s.halaqa===_selH;});
       if(!_selSid&&inH.length)_selSid=inH[0].id;
     }
+    render();
+    return apiGet('getRecords');
+  }).then(function(recordsData){
+    _data.records=(recordsData&&recordsData.records)||[];
     render();
   }).catch(function(e){
     document.getElementById('app').innerHTML='<div class="card-sard" style="text-align:center;padding:32px;color:var(--danger);"><i class="fas fa-exclamation-circle" style="font-size:2rem;margin-bottom:8px;display:block;"></i>خطأ: '+escH(e.message||String(e))+'</div>';
