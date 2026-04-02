@@ -13,7 +13,7 @@ export default {
 
     const gasUrl = env.GAS_WEB_APP_URL;
     if (!gasUrl) {
-      return json({ error: 'GAS_WEB_APP_URL غير مضبوط في متغيرات Worker' }, 500, corsHeaders);
+      return json({ error: 'https://script.google.com/macros/s/AKfycbxfAz3YTvh9okkdxDkqjet_mlrK19ngI1KG1CCJObmIYE1_Ao2qKQHpyIqO9eTCFOjRZA/exec غير مضبوط في متغيرات Worker' }, 500, corsHeaders);
     }
 
     try {
