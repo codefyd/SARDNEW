@@ -548,14 +548,11 @@ function fillCert(d){
   document.getElementById('certDesc').innerHTML = desc;
 
   var stats = [
-    { num: d.partsSaved || 0,    label: 'أجزاء
-محفوظة', color: '#014979', ring: '#014979' },
-    { num: d.totalSections || 0, label: 'مقاطع
-معروضة', color: '#014979', ring: '#014979' },
-    { num: d.passed || 0,        label: 'مجتاز',          color: '#1a7a4a', ring: '#1a7a4a' },
-    { num: d.failed || 0,        label: 'راسب',           color: '#c0392b', ring: '#c0392b' },
-    { num: pct + '%',            label: 'نسبة
-الاجتياز', color: pctColor,  ring: pctColor }
+    { num: d.partsSaved || 0,    label: 'أجزاء\nمحفوظة', color: '#014979', ring: '#014979' },
+    { num: d.totalSections || 0, label: 'مقاطع\nمعروضة', color: '#014979', ring: '#014979' },
+    { num: d.passed || 0,        label: 'مجتاز', color: '#1a7a4a', ring: '#1a7a4a' },
+    { num: d.failed || 0,        label: 'راسب', color: '#c0392b', ring: '#c0392b' },
+    { num: pct + '%',            label: 'نسبة\nالاجتياز', color: pctColor, ring: pctColor }
   ];
 
   document.getElementById('certStats').innerHTML = stats.map(function(s, i){
