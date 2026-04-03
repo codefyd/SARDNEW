@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -782,9 +783,14 @@
       </div>
 
       <div class="card-sard animate-in" id="attStudentsCard" style="display:none;">
-        <div class="d-flex justify-between align-center" style="margin-bottom:14px;">
+        <div class="d-flex justify-between align-center flex-wrap gap-2" style="margin-bottom:14px;">
           <div class="card-title" style="margin-bottom:0;"><i class="fas fa-users"></i> طلاب الحلقة</div>
-          <span id="attStudentCount" class="badge-sard badge-prim"></span>
+          <div class="d-flex align-center gap-2 flex-wrap">
+            <span id="attStudentCount" class="badge-sard badge-prim"></span>
+            <button class="btn-outline-sard" type="button" onclick="markAllAttendancePresent()" style="padding:7px 12px;font-size:.82rem;">
+              <i class="fas fa-check-double"></i> تحديد الكل كحاضر
+            </button>
+          </div>
         </div>
         <div id="attStudentsList" style="display:flex;flex-direction:column;gap:8px;"></div>
         <div class="mt-4">
@@ -1652,11 +1658,30 @@ function renderSections() {
 }
 
 function setPartNumber(idx, val) {
-  const n = parseInt(val, 10);
-  if (!val || isNaN(n) || n < 1 || n > 30) return;
+  const sec = STATE.evalSections[idx];
+  const raw = String(val ?? '').trim();
 
-  STATE.evalSections[idx].partNumber = String(n);
-  // لا اقتراح تلقائي للحزب — يختار المستخدم بنفسه
+  if (!raw) {
+    sec.partNumber = '';
+    sec.hizb = '';
+    sec.score = 0;
+    sec.isPassed = false;
+    sec.failFace = '';
+    refreshHizbButtons(idx);
+    recalcSection(idx);
+    return;
+  }
+
+  const n = parseInt(raw, 10);
+  if (isNaN(n) || n < 1 || n > 30) return;
+
+  sec.partNumber = String(n);
+
+  if (sec.hizb) {
+    const usedCombos = getUsedCombos(idx);
+    const selectedKey = String(sec.partNumber) + '_' + String(sec.hizb);
+    if (usedCombos[selectedKey]) sec.hizb = '';
+  }
 
   refreshHizbButtons(idx);
   recalcSection(idx);
@@ -1698,6 +1723,23 @@ function setHizb(idx, val, btn) {
   const eff = STATE.evalRecord.eff;
   const div = eff.partsDivisions;
   const sec = STATE.evalSections[idx];
+
+  if (!sec.partNumber) {
+    showToast('أدخل رقم الجزء أولاً', 'warning');
+    return;
+  }
+
+  if (String(sec.hizb) === String(val)) {
+    sec.hizb = '';
+    sec.score = 0;
+    sec.isPassed = false;
+    sec.failFace = '';
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.sel-btn').forEach(b => b.classList.remove('active'));
+    recalcSection(idx);
+    return;
+  }
+
   const usedCombos = getUsedCombos(idx);
   const comboKey = String(sec.partNumber || '') + '_' + String(val);
 
@@ -1728,7 +1770,26 @@ function setFailFace(idx, val) {
 function recalcSection(idx) {
   const sec = STATE.evalSections[idx];
   const eff = STATE.evalRecord.eff;
-  if (!sec.partNumber || !sec.hizb) return;
+  const circle = document.getElementById('score-circle-' + idx);
+  const card = document.getElementById('sec-card-' + idx);
+  const failWrap = document.getElementById('fail-wrap-' + idx);
+
+  if (!sec.partNumber || !sec.hizb) {
+    sec.score = 0;
+    sec.isPassed = false;
+
+    if (circle) {
+      circle.className = 'score-circle';
+      circle.style.borderColor = 'var(--border)';
+      circle.style.color = 'var(--text-muted)';
+      circle.innerHTML = '—';
+    }
+
+    if (card) card.className = 'section-card editing';
+    if (failWrap) failWrap.style.display = 'none';
+    updateKPI();
+    return;
+  }
 
   const score = calcScore(sec, eff);
   const passed = score >= eff.passingScorePerSection;
@@ -1736,17 +1797,15 @@ function recalcSection(idx) {
   sec.isPassed = passed;
 
   const maxScore = 20 / eff.partsDivisions;
-  const circle = document.getElementById('score-circle-' + idx);
   if (circle) {
     circle.className = 'score-circle ' + (passed ? 'score-pass' : 'score-fail');
+    circle.style.borderColor = '';
+    circle.style.color = '';
     circle.innerHTML = `${escapeHtml(String(score))} <span style="font-size:.65rem;">/${escapeHtml(String(maxScore))}</span>`;
   }
 
-  const card = document.getElementById('sec-card-' + idx);
   if (card) card.className = 'section-card editing';
 
-  // [تعديل 3] وجه الرسوب: إخفاء/إظهار فقط إذا كان requireFailReason مفعّلاً
-  const failWrap = document.getElementById('fail-wrap-' + idx);
   if (failWrap) {
     failWrap.style.display = (!passed && eff.requireFailReason) ? 'block' : 'none';
   }
@@ -1986,8 +2045,8 @@ function renderAttStudents() {
     const row = document.createElement('div');
     row.className = 'att-row';
 
-    if (!STATE.attStatuses[s.id]) {
-      STATE.attStatuses[s.id] = s.attendanceStatus || 'present';
+    if (typeof STATE.attStatuses[s.id] === 'undefined') {
+      STATE.attStatuses[s.id] = s.attendanceStatus || '';
     }
 
     const btns = statuses.map(st => `
@@ -2026,6 +2085,25 @@ function setAttStatus(studentId, status) {
   });
 }
 
+function markAllAttendancePresent() {
+  if (!STATE.attHalaqa) { showToast('اختر الحلقة أولاً', 'warning'); return; }
+
+  const hid = STATE.attHalaqa.id;
+  const isTrack = String(hid).startsWith('track:');
+  const trackName = isTrack ? String(hid).replace('track:', '') : null;
+  const useTracksOnly = !!STATE.settings.hideHalaqasAndUseTracksOnly;
+
+  const filtered = STATE.students.filter(s => {
+    if (isTrack || useTracksOnly) return s.track === trackName;
+    return s.halaqa === hid;
+  });
+
+  filtered.forEach(s => {
+    STATE.attStatuses[s.id] = 'present';
+    setAttStatus(String(s.id), 'present');
+  });
+}
+
 function doSaveAttendance() {
   if (!STATE.attHalaqa) { showToast('اختر الحلقة أولاً', 'warning'); return; }
 
@@ -2042,13 +2120,25 @@ function doSaveAttendance() {
 
   if (!filtered.length) { showToast('لا يوجد طلاب', 'warning'); return; }
 
+  const unselected = filtered.filter(s => !STATE.attStatuses[s.id]);
+  if (unselected.length) {
+    Swal.fire({
+      icon:'warning',
+      title:'التحضير غير مكتمل',
+      text:'يوجد طلاب لم يتم تحديد حالتهم بعد. حدّد الحالة يدويًا أو استخدم زر تحديد الكل كحاضر.',
+      confirmButtonColor:'#014979',
+      confirmButtonText:'حسناً'
+    });
+    return;
+  }
+
   const payload = {
     date: today,
     halaqaId: hid,
     halaqaName: STATE.attHalaqa.name,
     students: filtered.map(s => ({
       studentId: s.id,
-      status: STATE.attStatuses[s.id] || 'present'
+      status: STATE.attStatuses[s.id]
     }))
   };
 
