@@ -98,14 +98,16 @@
     #certOverlay{
       display:none;
       position:fixed;inset:0;
-      background:rgba(0,0,0,0.72);
+      background:rgba(0,0,0,0.78);
       z-index:9999;
-      align-items:center;
+      align-items:flex-start;
       justify-content:center;
       padding:20px;
-      overflow-y:auto;
+      overflow:auto;
     }
     #certOverlay.show{display:flex;}
+
+    :root{--cert-scale:.22;}
 
     .cert-actions{
       position:fixed;
@@ -241,7 +243,7 @@
     <button class="cert-btn cert-btn-close" onclick="closeCert()"><i class="fas fa-times"></i> إغلاق</button>
   </div>
 
-  <div id="certPaper">
+  <div class="cert-preview-shell"><div id="certPaper">
     <div class="cert-bg"></div>
     <div class="cert-watermark">☽</div>
 
@@ -348,7 +350,7 @@
         <path d="M0,22 Q195,6 390,22 L390,26 Q195,10 0,26 Z" fill="rgba(255,255,255,0.1)"/>
       </svg>
     </div>
-  </div>
+  </div></div>
 </div>
 
 <script>
@@ -548,42 +550,63 @@ function fillCert(d){
   document.getElementById('certDesc').innerHTML = desc;
 
   var stats = [
-    { num: d.partsSaved || 0,    label: 'أجزاء\nمحفوظة', color: '#014979', ring: '#014979' },
-    { num: d.totalSections || 0, label: 'مقاطع\nمعروضة', color: '#014979', ring: '#014979' },
+    { num: d.partsSaved || 0,    label: 'أجزاء<br>محفوظة', color: '#014979', ring: '#014979' },
+    { num: d.totalSections || 0, label: 'مقاطع<br>معروضة', color: '#014979', ring: '#014979' },
     { num: d.passed || 0,        label: 'مجتاز', color: '#1a7a4a', ring: '#1a7a4a' },
     { num: d.failed || 0,        label: 'راسب', color: '#c0392b', ring: '#c0392b' },
-    { num: pct + '%',            label: 'نسبة\nالاجتياز', color: pctColor, ring: pctColor }
+    { num: pct + '%',            label: 'نسبة<br>الاجتياز', color: pctColor, ring: pctColor }
   ];
 
   document.getElementById('certStats').innerHTML = stats.map(function(s, i){
     return '<div class="cert-stat-item">'
       + '<div class="cert-stat-ring" style="background:conic-gradient(' + s.ring + ' 0%,#e2e8f0 0%);box-shadow:0 3px 10px ' + s.ring + '33;">'
       + '<div class="cert-stat-inner"></div>'
-      + '<span class="cert-stat-num" style="font-size:' + (i===4 ? '0.78rem' : '1rem') + ';color:' + s.color + ';">' + escH(String(s.num)) + '</span>'
+      + '<span class="cert-stat-num" style="font-size:' + (i===4 ? '2.35rem' : '3rem') + ';color:' + s.color + ';">' + escH(String(s.num)) + '</span>'
       + '</div>'
       + '<div class="cert-stat-label">' + s.label + '</div>'
       + '</div>';
   }).join('');
 }
 
-function saveCert(){
+async function waitForCertReady(){
+  try { if (document.fonts && document.fonts.ready) { await document.fonts.ready; } } catch (e) {}
+  await new Promise(function(resolve){ requestAnimationFrame(function(){ requestAnimationFrame(resolve); }); });
+}
+
+function updateCertScale(){
+  var maxW = Math.max(320, window.innerWidth - 40);
+  var maxH = Math.max(320, window.innerHeight - 140);
+  var scale = Math.min(maxW / 1593, maxH / 2560, 0.42);
+  scale = Math.max(scale, 0.16);
+  document.documentElement.style.setProperty('--cert-scale', String(scale));
+}
+
+async function saveCert(){
   var actions = document.getElementById('certActions');
   if(actions) actions.style.display = 'none';
-  html2canvas(document.getElementById('certPaper'), {
-    scale: 3,
-    useCORS: true,
-    backgroundColor: '#ffffff'
-  }).then(function(canvas){
-    if(actions) actions.style.display = 'flex';
+  try {
+    updateCertScale();
+    await waitForCertReady();
+    var canvas = await html2canvas(document.getElementById('certPaper'), {
+      width: 1593,
+      height: 2560,
+      windowWidth: 1593,
+      windowHeight: 2560,
+      scale: 1,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
     var link = document.createElement('a');
     var name = (document.getElementById('certStudentName').textContent || 'طالب').trim();
     link.download = 'شهادة_' + name + '.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
-  }).catch(function(){
-    if(actions) actions.style.display = 'flex';
+  } catch (e) {
     alert('تعذر حفظ الشهادة كصورة');
-  });
+  } finally {
+    if(actions) actions.style.display = 'flex';
+  }
 }
 
 function exportCert(p){
@@ -612,6 +635,8 @@ function doCert(idx){
   }).catch(function(){exportCert(payload);});
 }
 
+updateCertScale();
+window.addEventListener('resize', updateCertScale);
 document.getElementById('q').addEventListener('keydown',function(e){if(e.key==='Enter')run();});
 preloadInitData();
 loadLookupStats();
