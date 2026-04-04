@@ -1,6 +1,8 @@
 
 
 
+
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -504,12 +506,22 @@ function detDiv(sections){
   return mx>=4?4:mx>=2?2:1;
 }
 
+function calcEffectiveTotalScore(sections){
+  if(!Array.isArray(sections)||!sections.length)return 0;
+  return sections.reduce(function(sum,s){
+    if(!s||!s.isPassed)return sum;
+    var score=Number(s.score||0);
+    return sum + (isFinite(score)?score:0);
+  },0);
+}
+
+
 function renderCard(r,idx){
   var stu=r.student||{};var sum=r.summary||{};var sections=Array.isArray(r.sections)?r.sections:[];
   var total=Number(sum.totalSections||sections.length||0);
   var passed=Number(sum.passedSections||0);
   var failed=Number(sum.failedSections||0);
-  var totalScore=Number(sum.totalScore||0);
+  var totalScore=calcEffectiveTotalScore(sections);
   var div=detDiv(sections);
   var shownParts=partsValue(total,div);
   var passRate=shownParts>0?Math.round((totalScore/(shownParts*20))*100):0;
@@ -552,13 +564,14 @@ function normalizePhone(p){if(!p)return'';var d=String(p).replace(/\D/g,'');if(d
 
 function doWA(idx){
   var r=(window.__res||[])[idx];if(!r)return;
-  var stu=r.student||{};var sum=r.summary||{};
+  var stu=r.student||{};var sum=r.summary||{};var sections=Array.isArray(r.sections)?r.sections:[];
+  var totalScore=calcEffectiveTotalScore(sections);
   var phone=normalizePhone(stu.guardianPhone);if(!phone){alert('لا يوجد رقم ولي أمر');return;}
   var msg='السلام عليكم ورحمة الله وبركاته\n\nولي أمر الطالب: '+(stu.name||'')
     +'\n\nنتيجة عرض السرد:\nعدد المقاطع: '+(sum.totalSections||0)
     +'\nالمجتاز: '+(sum.passedSections||0)
     +'\nالرسوب: '+(sum.failedSections||0)
-    +'\nمجموع الدرجات: '+fP(sum.totalScore||0)
+    +'\nمجموع الدرجات: '+fP(totalScore)
     +'\n\nبارك الله في الجهود.';
   window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
 }
@@ -693,9 +706,10 @@ function closeCertIfBg(e){if(e.target===document.getElementById('certOverlay'))c
 function doCert(idx){
   var r=(window.__res||[])[idx];if(!r)return;
   var stu=r.student||{};var sum=r.summary||{};var sections=Array.isArray(r.sections)?r.sections:[];var div=detDiv(sections);
+  var totalScore=calcEffectiveTotalScore(sections);
   var payload={complexName:'',managerName:'',studentName:stu.name||'',halaqaName:stu.halaqa||'',
     track:stu.track||'',partsSaved:Number(stu.partsCount||0),partsDivisions:div,totalSections:Number(sum.totalSections||sections.length||0),
-    passed:Number(sum.passedSections||0),failed:Number(sum.failedSections||0),totalScore:Number(sum.totalScore||0),
+    passed:Number(sum.passedSections||0),failed:Number(sum.failedSections||0),totalScore:totalScore,
     issueDate:(new Intl.DateTimeFormat('ar-SA-u-ca-islamic',{day:'numeric',month:'long',year:'numeric'})).format(new Date())};
   ( __initCache ? Promise.resolve(__initCache) : preloadInitData() ).then(function(d){
     if(d&&d.complex&&d.complex.complexName)payload.complexName=d.complex.complexName;
