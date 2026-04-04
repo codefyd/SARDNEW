@@ -2046,7 +2046,13 @@ function renderAttStudents() {
     row.className = 'att-row';
 
     if (typeof STATE.attStatuses[s.id] === 'undefined') {
-  STATE.attStatuses[s.id] = '';
+  const savedStatus = (s.attendanceStatus || '').trim();
+
+  if (['present', 'late', 'excused', 'absent'].includes(savedStatus)) {
+    STATE.attStatuses[s.id] = savedStatus;   // استرجاع الحالة المحفوظة فقط
+  } else {
+    STATE.attStatuses[s.id] = '';            // بدون تحديد افتراضي
+  }
 }
 
     const btns = statuses.map(st => `
