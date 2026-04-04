@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -907,6 +908,18 @@
             <div class="toggle-knob"></div>
           </label>
         </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">قفل الملف كامل</div>
+            <div class="setting-desc">عند التفعيل يلزم إدخال نفس رمز الإعدادات والتحضير قبل تسجيل مقطع جديد</div>
+          </div>
+          <label class="toggle-wrap">
+            <input type="checkbox" id="s-lockFullFile" />
+            <div class="toggle-track"></div>
+            <div class="toggle-knob"></div>
+          </label>
+        </div>
       </div>
 
       <div class="card-sard animate-in">
@@ -1104,6 +1117,7 @@ const STATE = {
   attStatuses: {},
   settingsUnlocked: false,
   attUnlocked: false,
+  fileLockUnlocked: !!localStorage.getItem('sard_full_lock_unlocked'),
   recordsLoaded: false,
   recordsLoading: false
 };
@@ -1199,6 +1213,7 @@ function doLogout() {
     STATE.teacher = '';
     localStorage.removeItem('sard_teacher');
     localStorage.removeItem('sard_edit_unlocked');
+    localStorage.removeItem('sard_full_lock_unlocked');
     location.reload();
   });
 }
@@ -1239,6 +1254,56 @@ function showView(id) {
     return;
   }
   _doShowView(id);
+}
+
+// =============================================
+// FILE LOCK
+// =============================================
+function isFullFileLockEnabled() {
+  return !!STATE.settings.lockFullFile;
+}
+
+function ensureFileUnlocked(callback) {
+  if (!isFullFileLockEnabled()) {
+    if (typeof callback === 'function') callback();
+    return;
+  }
+
+  if (STATE.fileLockUnlocked || localStorage.getItem('sard_full_lock_unlocked')) {
+    STATE.fileLockUnlocked = true;
+    if (typeof callback === 'function') callback();
+    return;
+  }
+
+  Swal.fire({
+    title: 'الملف مقفل',
+    text: 'أدخل نفس رمز الإعدادات والتحضير للمتابعة',
+    input: 'password',
+    inputPlaceholder: 'رمز الدخول...',
+    confirmButtonText: 'فتح',
+    cancelButtonText: 'إلغاء',
+    showCancelButton: true,
+    confirmButtonColor: '#014979'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    google.script.run
+      .withSuccessHandler(data => {
+        const ok = data && (data.ok === true || data === true);
+        if (ok) {
+          STATE.fileLockUnlocked = true;
+          localStorage.setItem('sard_full_lock_unlocked', '1');
+          showToast('تم فتح قفل الملف', 'success');
+          if (typeof callback === 'function') callback();
+        } else {
+          showToast('رمز غير صحيح', 'error');
+        }
+      })
+      .withFailureHandler(() => {
+        showToast('خطأ في التحقق من الرمز', 'error');
+      })
+      .checkSettingsLockCode(result.value || '');
+  });
 }
 
 // =============================================
@@ -1342,6 +1407,10 @@ function selectStudent(id, btn) {
 // EVALUATION
 // =============================================
 function startEvaluation() {
+  ensureFileUnlocked(() => _startEvaluationCore());
+}
+
+function _startEvaluationCore() {
   if (!STATE.selStudent) return;
   if (STATE.recordsLoading && !STATE.recordsLoaded) {
     showToast('السجلات ما زالت تُحمّل في الخلفية، جرّب بعد لحظات.', 'info');
@@ -1877,6 +1946,11 @@ function buildWhatsappMessage(student, rec, eff) {
 
 // ===== [تعديل 1] حفظ النتيجة - يبقى في صفحة الطالب =====
 function doSaveRecord() {
+  if (isFullFileLockEnabled() && !STATE.fileLockUnlocked && !localStorage.getItem('sard_full_lock_unlocked')) {
+    ensureFileUnlocked(() => doSaveRecord());
+    return;
+  }
+
   const student  = STATE.evalRecord.student;
   const eff      = STATE.evalRecord.eff;
   const sections = STATE.evalSections.filter(s => s.partNumber && s.hizb);
@@ -2235,6 +2309,7 @@ function loadSettingsForm() {
     document.getElementById('s-requireFail').checked = !!s.requireFailReason;
     document.getElementById('s-activeTrack').value = s.activeTrackForSelection || '';
     document.getElementById('s-showReports').checked = !!s.showReportsButton;
+    document.getElementById('s-lockFullFile').checked = !!s.lockFullFile;
     document.getElementById('s-lockCode').value = '';
     document.getElementById('s-editCode').value = '';
     document.getElementById('s-whatsapp').value = s.whatsappTemplate || '';
@@ -2269,6 +2344,7 @@ function doSaveSettings() {
     requireFailReason: document.getElementById('s-requireFail').checked,
     activeTrackForSelection: document.getElementById('s-activeTrack').value.trim(),
     showReportsButton: document.getElementById('s-showReports').checked,
+    lockFullFile: document.getElementById('s-lockFullFile').checked,
     editSectionsCode: document.getElementById('s-editCode').value.trim(),
     whatsappTemplate: document.getElementById('s-whatsapp').value.trim()
   };
