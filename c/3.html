@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -131,8 +132,6 @@
     }
     .cert-btn:active{transform:scale(.97);}
     .cert-btn-save{background:linear-gradient(135deg,#b19738,#8a7420);color:#fff;box-shadow:0 4px 14px rgba(177,151,56,0.4);}
-    .cert-btn-print{background:#fff;color:var(--primary);}
-    .cert-btn-print:hover{background:#f0f4f8;}
     .cert-btn-close{background:rgba(255,255,255,0.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);}
     .cert-btn-close:hover{background:rgba(255,255,255,0.25);}
 
@@ -227,14 +226,7 @@
     .print-cert-root .cert-wave-top{top:-36px !important;}
     .print-cert-root .cert-footer{margin-top:16px !important;}
     .print-cert-root .cert-footer-text{font-size:1.2rem !important;}
-
-    @media print{
-      body *{visibility:hidden;}
-      #certOverlay,#certOverlay *{visibility:visible;}
-      #certOverlay{position:static;background:none;padding:0;display:block!important;}
-      .cert-actions{display:none!important;}
-      #certPaper{margin:0;box-shadow:none;}
-    }  </style>
+  </style>
 </head>
 <body>
 
@@ -273,8 +265,7 @@
 <div id="certOverlay" onclick="closeCertIfBg(event)">
   <div class="cert-actions" id="certActions">
     <button class="cert-btn cert-btn-save" onclick="saveCert()"><i class="fas fa-image"></i> حفظ كصورة</button>
-    <button class="cert-btn cert-btn-print" onclick="printCert()"><i class="fas fa-print"></i> طباعة</button>
-    <button class="cert-btn cert-btn-close" onclick="closeCert()"><i class="fas fa-times"></i> إغلاق</button>
+        <button class="cert-btn cert-btn-close" onclick="closeCert()"><i class="fas fa-times"></i> إغلاق</button>
   </div>
 
   <div class="cert-preview-shell"><div id="certPaper">
@@ -634,46 +625,6 @@ async function waitForCertReady(){
   await new Promise(function(resolve){ requestAnimationFrame(function(){ requestAnimationFrame(resolve); }); });
 }
 
-function buildExportCertNode(){
-  var source = document.getElementById('certPaper');
-  var clone = source.cloneNode(true);
-  clone.id = 'certPaperExport';
-  clone.classList.add('print-cert-root');
-  clone.style.width = '1593px';
-  clone.style.height = '2560px';
-  clone.style.position = 'fixed';
-  clone.style.left = '-20000px';
-  clone.style.top = '0';
-  clone.style.zIndex = '-1';
-  clone.style.transform = 'none';
-  clone.style.maxWidth = 'none';
-  clone.style.maxHeight = 'none';
-  document.body.appendChild(clone);
-  return clone;
-}
-
-async function printCert(){
-  var actions = document.getElementById('certActions');
-  if(actions) actions.style.display = 'none';
-  var exportNode = null;
-  try {
-    exportNode = buildExportCertNode();
-    await waitForCertReady();
-    var w = window.open('', '_blank');
-    if(!w) throw new Error('PRINT_WINDOW_BLOCKED');
-    var styleHtml = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(function(el){ return el.outerHTML; }).join('\n');
-    var html = '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' + styleHtml + '<style>@page{size:1593px 2560px;margin:0;}html,body{margin:0;padding:0;background:#fff;}body{direction:rtl;}#certPaperExport{position:static !important;left:auto !important;top:auto !important;z-index:auto !important;}</style></head><body>' + exportNode.outerHTML + '<script>window.onload=function(){setTimeout(function(){window.print();setTimeout(function(){window.close();},200);},350);};<\/script></body></html>';
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-  } catch (e) {
-    alert('تعذرت طباعة الشهادة. تأكد من السماح بالنوافذ المنبثقة.');
-  } finally {
-    if(exportNode && exportNode.parentNode) exportNode.parentNode.removeChild(exportNode);
-    if(actions) actions.style.display = 'flex';
-  }
-}
-
 function updateCertScale(){
   var maxW = Math.max(320, window.innerWidth - 40);
   var maxH = Math.max(320, window.innerHeight - 140);
@@ -684,33 +635,41 @@ function updateCertScale(){
 
 async function saveCert(){
   var actions = document.getElementById('certActions');
+  var certPaper = document.getElementById('certPaper');
   if(actions) actions.style.display = 'none';
-  var exportNode = null;
   try {
     await waitForCertReady();
-    exportNode = buildExportCertNode();
-    await waitForCertReady();
-    var canvas = await html2canvas(exportNode, {
-      width: 1593,
-      height: 2560,
-      windowWidth: 1593,
-      windowHeight: 2560,
-      scale: 1,
+    var targetWidth = 1593;
+    var liveWidth = certPaper.getBoundingClientRect().width || certPaper.offsetWidth || 390;
+    var scale = targetWidth / liveWidth;
+    var canvas = await html2canvas(certPaper, {
+      scale: scale,
       useCORS: true,
       backgroundColor: '#ffffff',
-      logging: false
+      logging: false,
+      windowWidth: document.documentElement.scrollWidth,
+      windowHeight: document.documentElement.scrollHeight
     });
+
+    var outputCanvas = document.createElement('canvas');
+    outputCanvas.width = 1593;
+    outputCanvas.height = 2560;
+    var ctx = outputCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+    ctx.drawImage(canvas, 0, 0, outputCanvas.width, outputCanvas.height);
+
     var link = document.createElement('a');
     var name = (document.getElementById('certStudentName').textContent || 'طالب').trim();
     link.download = 'شهادة_' + name + '.png';
-    link.href = canvas.toDataURL('image/png');
+    link.href = outputCanvas.toDataURL('image/png');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   } catch (e) {
+    console.error(e);
     alert('تعذر حفظ الشهادة كصورة');
   } finally {
-    if(exportNode && exportNode.parentNode) exportNode.parentNode.removeChild(exportNode);
     if(actions) actions.style.display = 'flex';
   }
 }
