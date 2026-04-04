@@ -566,7 +566,11 @@ function doWA(idx){
    الشهادة — التصميم الجديد
 ===================================================== */
 function fillCert(d){
-  var studentPct = d.totalSections > 0 ? Math.round((Number(d.totalScore || 0) / (d.totalSections * 10)) * 100) : 0;
+  var shownParts = partsValue(d.totalSections || 0, d.partsDivisions || 1);
+  var passedParts = partsValue(d.passed || 0, d.partsDivisions || 1);
+  var failedParts = partsValue(d.failed || 0, d.partsDivisions || 1);
+
+  var studentPct = shownParts > 0 ? Math.round((Number(d.totalScore || 0) / (shownParts * 20)) * 100) : 0;
   var pctCol = studentPct >= 80 ? '#1a7a4a' : studentPct >= 60 ? '#014979' : studentPct >= 40 ? '#d97706' : '#c0392b';
   var isHonor = studentPct >= 90;
   var shownParts = partsValue(d.totalSections || 0, d.partsDivisions || 1);
