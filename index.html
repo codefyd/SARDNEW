@@ -775,9 +775,9 @@
       <div class="card-sard animate-in">
         <div class="card-title"><i class="fas fa-clipboard-check"></i> التحضير اليومي</div>
         <div class="d-flex align-center gap-2 flex-wrap" style="margin-bottom:14px;">
-          <button class="btn-outline-sard" onclick="loadAttendanceHalaqas()" style="padding:8px 14px;">
-            <i class="fas fa-sync-alt"></i> تحديث
-          </button>
+          <button class="btn-outline-sard" onclick="refreshAttendanceData()" style="padding:8px 14px;">
+  <i class="fas fa-sync-alt"></i> تحديث
+</button>
         </div>
         <div class="grid-4" id="attHalaqaGrid"></div>
       </div>
@@ -1980,17 +1980,22 @@ function unlockAttendance() {
     .checkSettingsLockCode(code);
 }
 
-function loadAttendanceHalaqas() {
+function loadAttendanceHalaqas(resetSelection = true) {
   const s = STATE.settings;
   const useTracksOnly = !!s.hideHalaqasAndUseTracksOnly;
 
   let items = [];
   if (useTracksOnly) {
-    items = STATE.trackConfigs.filter(t => t.name).map(t => ({ id:'track:' + t.name, name:'مسار ' + t.name }));
+    items = STATE.trackConfigs
+      .filter(t => t.name)
+      .map(t => ({ id: 'track:' + t.name, name: 'مسار ' + t.name }));
   } else {
     items = [...STATE.halaqas];
     if (s.activeTrackForSelection) {
-      items.push({ id:'track:' + s.activeTrackForSelection, name:'مسار ' + s.activeTrackForSelection });
+      items.push({
+        id: 'track:' + s.activeTrackForSelection,
+        name: 'مسار ' + s.activeTrackForSelection
+      });
     }
   }
 
@@ -2005,11 +2010,47 @@ function loadAttendanceHalaqas() {
     grid.appendChild(btn);
   });
 
-  STATE.attHalaqa = null;
-  STATE.attStatuses = {};
-  document.getElementById('attStudentsCard').style.display = 'none';
+  if (resetSelection) {
+    STATE.attHalaqa = null;
+    STATE.attStatuses = {};
+    document.getElementById('attStudentsCard').style.display = 'none';
+  }
 }
 
+
+  async function refreshAttendanceData() {
+  const prevHalaqa = STATE.attHalaqa ? { ...STATE.attHalaqa } : null;
+
+  try {
+    showSpinner();
+
+    const studentsData = await _apiGet('getStudents');
+    STATE.students = studentsData.students || [];
+    STATE.halaqas = studentsData.halaqas || [];
+
+loadAttendanceHalaqas(false);
+    
+    if (prevHalaqa) {
+      const btns = Array.from(document.querySelectorAll('#attHalaqaGrid .sel-btn'));
+      const targetBtn = btns.find(b => {
+        const txt = (b.textContent || '').trim();
+        return txt === prevHalaqa.name;
+      });
+
+      if (targetBtn) {
+        selectAttHalaqa(prevHalaqa.id, prevHalaqa.name, targetBtn);
+      }
+    }
+
+    showToast('تم تحديث بيانات التحضير', 'success');
+  } catch (err) {
+    showToast('تعذر تحديث بيانات التحضير: ' + (err.message || err), 'error');
+  } finally {
+    hideSpinner();
+  }
+}
+
+  
 function selectAttHalaqa(id, name, btn) {
   STATE.attHalaqa = { id, name };
   STATE.attStatuses = {};
