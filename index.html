@@ -2046,8 +2046,8 @@ function renderAttStudents() {
     row.className = 'att-row';
 
     if (typeof STATE.attStatuses[s.id] === 'undefined') {
-      STATE.attStatuses[s.id] = s.attendanceStatus || '';
-    }
+  STATE.attStatuses[s.id] = '';
+}
 
     const btns = statuses.map(st => `
       <button class="att-status-btn ${STATE.attStatuses[s.id] === st.id ? st.cls : ''}"
