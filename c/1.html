@@ -1,4 +1,7 @@
 
+
+
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -111,6 +114,17 @@
     .cell-pass{color:var(--success);font-weight:800;}
     .cell-fail{color:var(--danger);font-weight:800;}
     .cell-empty{color:#d1d5db;}
+
+    .section-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .tabs-wrap{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+    .subtab-btn{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:'Tajawal',sans-serif;font-size:.85rem;font-weight:700;color:var(--primary);transition:all .2s;}
+    .subtab-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+    .empty-box{padding:24px;text-align:center;color:var(--text-muted);}
+    .btn-excel-sard{background:linear-gradient(135deg,var(--primary),var(--primary-dk));color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 18px;font-family:'Tajawal',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow-sm);}
+    .btn-excel-sard:hover{transform:translateY(-1px);box-shadow:var(--shadow-md);}
+    .btn-excel-sard i{color:var(--gold);}
+    .filter-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
   </style>
 </head>
 <body>
@@ -231,7 +245,204 @@ function buildMiniTable(sections,partsDivisions){
   return '<div class="mini-tbl-wrap"><table class="mini-table">'+thead+'<tbody>'+tbody+'</tbody></table></div>';
 }
 
-var _data=null, _sel='';
+
+function statusLabel(status){
+  return status==='present'?'حاضر':status==='late'?'متأخر':status==='excused'?'معتذر':status==='absent'?'غائب':'—';
+}
+function statusBadgeClass(status){
+  return status==='present'?'badge-pass':status==='late'?'badge-warn':status==='excused'?'badge-info':status==='absent'?'badge-fail':'badge-prim';
+}
+function exportTableToExcel(filename, headers, rows){
+  var table = '<table><thead><tr>' + headers.map(function(h){return '<th>'+escH(h)+'</th>';}).join('') + '</tr></thead><tbody>'
+    + rows.map(function(row){
+      return '<tr>' + row.map(function(cell){return '<td>'+escH(cell==null?'':String(cell))+'</td>';}).join('') + '</tr>';
+    }).join('')
+    + '</tbody></table>';
+  var html = '<html><head><meta charset="UTF-8"></head><body>' + table + '</body></html>';
+  var blob = new Blob(['\ufeff', html], {type:'application/vnd.ms-excel;charset=utf-8;'});
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(function(){ URL.revokeObjectURL(link.href); }, 1000);
+}
+function buildAllStudentRows(selectedOnly){
+  if(!_data) return [];
+  var rows = [];
+  var halaqas = _data.halaqas || [];
+  var selectedName = _sel || '';
+  halaqas.forEach(function(h){
+    if(selectedOnly && h.name !== selectedName) return;
+    var students = (_data.studentsByHalaqa && _data.studentsByHalaqa[h.name]) ? _data.studentsByHalaqa[h.name] : [];
+    students.forEach(function(st, idx){
+      rows.push([
+        h.name || '',
+        idx + 1,
+        st.name || '',
+        statusLabel(st.status),
+        st.expectedParts || 0,
+        st.displayedParts || 0,
+        st.passedParts || 0,
+        fP(st.coveragePercent || 0) + '%',
+        fP(st.passFromExpectedPercent || 0) + '%',
+        st.failedParts || 0,
+        fP(st.failPercent || 0) + '%',
+        fP(st.studentPercent || 0) + '%',
+        st.rank || ''
+      ]);
+    });
+  });
+  return rows;
+}
+function exportDetailedStudents(selectedOnly){
+  var rows = buildAllStudentRows(!!selectedOnly);
+  if(!rows.length){ alert('لا توجد بيانات للتصدير'); return; }
+  var headers = ['الحلقة','#','اسم الطالب','الحضور','المفترض','المعروضة','المجتازة','نسبة العرض','نسبة الاجتياز','الرسوب','نسبة الرسوب','نسبة الطالب','الترتيب'];
+  var suffix = selectedOnly ? (_sel || 'الحلقة') : 'كل-الطلاب';
+  exportTableToExcel('تقرير-الحلقة-التفصيلي-' + suffix + '.xls', headers, rows);
+}
+function getSpecialFilterOptions(){
+  var halaqas = (_data && _data.halaqas) ? _data.halaqas : [];
+  var opts = ['<option value="__all__"'+(_specialFilter==='__all__'?' selected':'')+'>كل الحلق</option>'];
+  halaqas.forEach(function(h){
+    var name = h && h.name ? h.name : '';
+    opts.push('<option value="'+escH(name)+'"'+(_specialFilter===name?' selected':'')+'>'+escH(name)+'</option>');
+  });
+  return opts.join('');
+}
+function getSpecialFilteredStudents(){
+  if(!_data || !_data.studentsByHalaqa) return [];
+  var rows = [];
+  if(_specialFilter === '__all__'){
+    Object.keys(_data.studentsByHalaqa).forEach(function(hName){
+      (_data.studentsByHalaqa[hName] || []).forEach(function(st){
+        rows.push(Object.assign({halaqa:hName}, st));
+      });
+    });
+  } else {
+    (_data.studentsByHalaqa[_specialFilter] || []).forEach(function(st){
+      rows.push(Object.assign({halaqa:_specialFilter}, st));
+    });
+  }
+  return rows;
+}
+function buildAbsentRows(selectedStudents){
+  return (selectedStudents || []).filter(function(st){ return st.status === 'absent'; }).map(function(st, idx){
+    return {
+      idx: idx + 1,
+      halaqa: st.halaqa || '',
+      name: st.name || '',
+      status: statusLabel(st.status),
+      expectedParts: st.expectedParts || 0,
+      displayedParts: st.displayedParts || 0,
+      remainingParts: st.remainingParts || 0,
+      studentPercent: fP(st.studentPercent || 0) + '%'
+    };
+  });
+}
+function buildRemainingRows(selectedStudents){
+  return (selectedStudents || []).filter(function(st){ return Number(st.remainingParts || 0) > 0; }).map(function(st, idx){
+    return {
+      idx: idx + 1,
+      halaqa: st.halaqa || '',
+      name: st.name || '',
+      status: statusLabel(st.status),
+      expectedParts: st.expectedParts || 0,
+      displayedParts: st.displayedParts || 0,
+      remainingParts: st.remainingParts || 0,
+      passPercent: fP(st.passFromExpectedPercent || 0) + '%',
+      studentPercent: fP(st.studentPercent || 0) + '%'
+    };
+  });
+}
+function exportSpecialTab(tabName){
+  var students = getSpecialFilteredStudents();
+  var rows = [];
+  var headers = [];
+  var filterLabel = _specialFilter === '__all__' ? 'كل-الحلق' : _specialFilter;
+  var filename = '';
+  if(tabName === 'absent'){
+    var absentRows = buildAbsentRows(students);
+    rows = absentRows.map(function(r){ return [r.halaqa, r.idx, r.name, r.status, r.expectedParts, r.displayedParts, r.remainingParts, r.studentPercent]; });
+    headers = ['الحلقة','#','اسم الطالب','الحالة','المفترض','المعروضة','المتبقي','نسبة الطالب'];
+    filename = 'الطلاب-الغائبون-' + filterLabel + '.xls';
+  } else {
+    var remainingRows = buildRemainingRows(students);
+    rows = remainingRows.map(function(r){ return [r.halaqa, r.idx, r.name, r.status, r.expectedParts, r.displayedParts, r.remainingParts, r.passPercent, r.studentPercent]; });
+    headers = ['الحلقة','#','اسم الطالب','الحالة','المفترض','المعروضة','المتبقي','نسبة الاجتياز','نسبة الطالب'];
+    filename = 'الطلاب-المتبقي-عليهم-عرض-' + filterLabel + '.xls';
+  }
+  if(!rows.length){ alert('لا توجد بيانات للتصدير'); return; }
+  exportTableToExcel(filename, headers, rows);
+}
+function buildSpecialTabsHtml(selectedStudents){
+  var specialStudents = getSpecialFilteredStudents();
+  var absentRows = buildAbsentRows(specialStudents);
+  var remainingRows = buildRemainingRows(specialStudents);
+
+  function makeRows(rows, type){
+    if(!rows.length) return '<tr><td colspan="' + (type==='absent' ? 8 : 9) + '" class="empty-box">لا توجد بيانات في هذا التبويب</td></tr>';
+    return rows.map(function(r){
+      if(type === 'absent'){
+        return '<tr><td>'+r.idx+'</td><td><b>'+escH(r.name)+'</b></td><td>'+escH(r.status)+'</td><td>'+escH(String(r.expectedParts))+'</td><td>'+escH(String(r.displayedParts))+'</td><td>'+escH(String(r.remainingParts))+'</td><td>'+escH(r.studentPercent)+'</td><td>'+escH(r.halaqa)+'</td></tr>';
+      }
+      return '<tr><td>'+r.idx+'</td><td><b>'+escH(r.name)+'</b></td><td>'+escH(r.status)+'</td><td>'+escH(String(r.expectedParts))+'</td><td>'+escH(String(r.displayedParts))+'</td><td>'+escH(String(r.remainingParts))+'</td><td>'+escH(r.passPercent)+'</td><td>'+escH(r.studentPercent)+'</td><td>'+escH(r.halaqa)+'</td></tr>';
+    }).join('');
+  }
+
+  var exportBtnHtml = '<button class="btn-excel-sard" onclick="exportSpecialTab(\''+_specialTab+'\')"><i class="fas fa-file-export"></i> تصدير</button>';
+
+  return ''
+    + '<div class="card-sard animate-in">'
+    +   '<div class="d-flex justify-between align-center flex-wrap gap-2" style="margin-bottom:14px;">'
+    +     '<div class="card-title" style="margin-bottom:0;"><i class="fas fa-users-viewfinder" style="color:var(--gold);"></i>قوائم المتابعة</div>'
+    +     '<div class="filter-inline">'
+    +       '<span class="text-muted fw-bold" style="font-size:.85rem;">فلترة:</span>'
+    +       '<select class="sard-select" id="specialFilterSel" onchange="setSpecialFilter(this.value)">'+getSpecialFilterOptions()+'</select>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="d-flex align-center flex-wrap gap-2" style="margin-bottom:14px;">'
+    +     '<button class="subtab-btn '+(_specialTab==='absent'?'active':'')+'" id="subtab-btn-absent" onclick="setSpecialTab(\'absent\')">الطلاب الغائبون ('+absentRows.length+')</button>'
+    +     '<button class="subtab-btn '+(_specialTab==='remaining'?'active':'')+'" id="subtab-btn-remaining" onclick="setSpecialTab(\'remaining\')">المتبقي عليهم عرض ('+remainingRows.length+')</button>'
+    +     exportBtnHtml
+    +   '</div>'
+    +   '<div id="special-tab-absent"'+(_specialTab==='absent'?'':' style="display:none;"')+'>'
+    +     '<div class="tbl-wrap"><table class="sard-table">'
+    +       '<thead><tr><th>#</th><th>اسم الطالب</th><th>الحالة</th><th>المفترض</th><th>المعروضة</th><th>المتبقي</th><th>نسبة الطالب</th><th>الحلقة</th></tr></thead>'
+    +       '<tbody>' + makeRows(absentRows, 'absent') + '</tbody>'
+    +     '</table></div>'
+    +   '</div>'
+    +   '<div id="special-tab-remaining"'+(_specialTab==='remaining'?'':' style="display:none;"')+'>'
+    +     '<div class="tbl-wrap"><table class="sard-table">'
+    +       '<thead><tr><th>#</th><th>اسم الطالب</th><th>الحالة</th><th>المفترض</th><th>المعروضة</th><th>المتبقي</th><th>نسبة الاجتياز</th><th>نسبة الطالب</th><th>الحلقة</th></tr></thead>'
+    +       '<tbody>' + makeRows(remainingRows, 'remaining') + '</tbody>'
+    +     '</table></div>'
+    +   '</div>'
+    + '</div>';
+}
+function setSpecialTab(tabName){
+  _specialTab = (tabName === 'remaining') ? 'remaining' : 'absent';
+  var absent = document.getElementById('special-tab-absent');
+  var remaining = document.getElementById('special-tab-remaining');
+  var btnA = document.getElementById('subtab-btn-absent');
+  var btnR = document.getElementById('subtab-btn-remaining');
+  if(absent) absent.style.display = _specialTab === 'absent' ? '' : 'none';
+  if(remaining) remaining.style.display = _specialTab === 'remaining' ? '' : 'none';
+  if(btnA) btnA.classList.toggle('active', _specialTab === 'absent');
+  if(btnR) btnR.classList.toggle('active', _specialTab === 'remaining');
+}
+function setSpecialFilter(value){
+  _specialFilter = value || '__all__';
+  render();
+  setTimeout(function(){
+    var el = document.getElementById('specialFilterSel');
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 50);
+}
+
+var _data=null, _sel='', _specialFilter='__all__', _specialTab='absent';
 function loadData(){
   setSpinner('app');
   apiGet('getDailySummary').then(function(d){_data=d;render();}).catch(function(e){
@@ -296,9 +507,12 @@ function render(){
     // إحصاءات المجمع
     '<div class="card-sard animate-in">'
     +'<div class="card-title"><i class="fas fa-building-columns" style="color:var(--gold);"></i> تقرير المجمع العام</div>'
-    +'<div class="grid-5" style="margin-bottom:12px;">'
+    +'<div class="grid-3" style="margin-bottom:12px;">'
     +kpiCard('عدد الحلقات',fN(center.halaqaCount),'fa-layer-group')
     +kpiCard('حاضر / متأخر',fN(center.present)+' / '+fN(center.late),'fa-users')
+    +kpiCard('الغياب / الاعتذار',fN(center.absent)+' / '+fN(center.excused),'fa-user-clock')
+    +'</div>'
+    +'<div class="grid-3" style="margin-bottom:12px;">'
     +kpiCard('الأجزاء المفترضة',fN(center.expectedParts),'fa-list-ol')
     +kpiCard('الأجزاء المعروضة',fN(center.displayedParts),'fa-book-open')
     +kpiCard('الأجزاء المجتازة',fN(center.passedParts),'fa-check-circle','green')
@@ -323,14 +537,17 @@ function render(){
     +'<div class="card-sard animate-in">'
     +'<div class="d-flex justify-between align-center flex-wrap gap-2" style="margin-bottom:16px;">'
     +'<div class="card-title" style="margin-bottom:0;"><i class="fas fa-user-graduate" style="color:var(--gold);"></i> تقرير الحلقة التفصيلي</div>'
-    +'<div class="d-flex align-center gap-2">'
+    +'<div class="section-tools">'
     +'<span class="text-muted fw-bold" style="font-size:.85rem;">اختر الحلقة:</span>'
     +'<select class="sard-select" id="hSel" onchange="selHalaqa(this.value)">'+halaqaOpts+'</select>'
+    +'<button class="btn-excel-sard" onclick="exportDetailedStudents(true)"><i class="fas fa-file-export"></i> تصدير الحلقة المحددة</button>'
+    +'<button class="btn-excel-sard" onclick="exportDetailedStudents(false)"><i class="fas fa-file-export"></i> تصدير كل الطلاب</button>'
     +'</div></div>'
     +'<div class="tbl-wrap"><table class="sard-table">'
     +'<thead><tr><th>#</th><th>اسم الطالب</th><th>الحضور</th><th>المفترض</th><th>المعروضة</th>'
     +'<th>المجتازة</th><th>نسبة العرض</th><th>نسبة الاجتياز</th><th>الرسوب</th><th>نسبة الرسوب</th><th>نسبة الطالب</th><th>الترتيب</th></tr></thead>'
-    +'<tbody>'+studentRows+'</tbody></table></div></div>';
+    +'<tbody>'+studentRows+'</tbody></table></div></div>'
+    +buildSpecialTabsHtml(students);
 }
 
 function selHalaqa(name){
