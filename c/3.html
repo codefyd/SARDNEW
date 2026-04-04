@@ -507,11 +507,12 @@ function detDiv(sections){
 function renderCard(r,idx){
   var stu=r.student||{};var sum=r.summary||{};var sections=Array.isArray(r.sections)?r.sections:[];
   var total=Number(sum.totalSections||sections.length||0);
-  var passed=Number(sum.passedSections||0);var failed=Number(sum.failedSections||0);
+  var passed=Number(sum.passedSections||0);
+  var failed=Number(sum.failedSections||0);
   var totalScore=Number(sum.totalScore||0);
   var div=detDiv(sections);
-  var passRate=total>0?Math.round((totalScore/(total*20))*100):0;
   var shownParts=partsValue(total,div);
+  var passRate=shownParts>0?Math.round((totalScore/(shownParts*20))*100):0;
 
   document.getElementById('out').innerHTML=
     '<div class="card-sard animate-in">'
