@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -398,15 +399,13 @@ function buildSpecialTabsHtml(selectedStudents){
     + '<div class="card-sard animate-in">'
     +   '<div class="d-flex justify-between align-center flex-wrap gap-2" style="margin-bottom:14px;">'
     +     '<div class="card-title" style="margin-bottom:0;"><i class="fas fa-users-viewfinder" style="color:var(--gold);"></i>قوائم المتابعة</div>'
-    +     '<div class="filter-inline">'
+    +     '<div class="section-tools">'
     +       '<span class="text-muted fw-bold" style="font-size:.85rem;">فلترة:</span>'
     +       '<select class="sard-select" id="specialFilterSel" onchange="setSpecialFilter(this.value)">'+getSpecialFilterOptions()+'</select>'
+    +       '<button class="subtab-btn '+(_specialTab==='absent'?'active':'')+'" id="subtab-btn-absent" onclick="setSpecialTab(\'absent\')">الطلاب الغائبون ('+absentRows.length+')</button>'
+    +       '<button class="subtab-btn '+(_specialTab==='remaining'?'active':'')+'" id="subtab-btn-remaining" onclick="setSpecialTab(\'remaining\')">المتبقي عليهم عرض ('+remainingRows.length+')</button>'
+    +       exportBtnHtml
     +     '</div>'
-    +   '</div>'
-    +   '<div class="d-flex align-center flex-wrap gap-2" style="margin-bottom:14px;">'
-    +     '<button class="subtab-btn '+(_specialTab==='absent'?'active':'')+'" id="subtab-btn-absent" onclick="setSpecialTab(\'absent\')">الطلاب الغائبون ('+absentRows.length+')</button>'
-    +     '<button class="subtab-btn '+(_specialTab==='remaining'?'active':'')+'" id="subtab-btn-remaining" onclick="setSpecialTab(\'remaining\')">المتبقي عليهم عرض ('+remainingRows.length+')</button>'
-    +     exportBtnHtml
     +   '</div>'
     +   '<div id="special-tab-absent"'+(_specialTab==='absent'?'':' style="display:none;"')+'>'
     +     '<div class="tbl-wrap"><table class="sard-table">'
