@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -320,27 +321,41 @@ function buildStats(student,record){
     return{expectedParts:exp,displayedParts:0,passedParts:0,failedParts:0,remainingParts:exp,coveragePercent:0,passFromExpectedPercent:0,failPercent:0,studentPercent:0};
   var div=Number(student.partsDivisions||2)||2;
   var unit=1/div;
+  var maxSPS=20/div;
   var hizbMap={};
+
   record.sections.forEach(function(s){
     if(!s||!s.partNumber)return;
     var pn=Number(s.partNumber);if(!pn||pn<1||pn>30)return;
     var hz=div===1?1:Number(s.hizb||1);if(hz<1||hz>div)return;
     var k=pn+'-'+hz;
-    if(!hizbMap[k])hizbMap[k]={hasPass:false,hasFail:false};
-    if(s.isPassed)hizbMap[k].hasPass=true;else hizbMap[k].hasFail=true;
+    if(!hizbMap[k])hizbMap[k]={hasPass:false,hasFail:false,scoreRatio:0};
+
+    if(s.isPassed){
+      hizbMap[k].hasPass=true;
+      var sc=Number(s.score);
+      var ratio=isFinite(sc)&&maxSPS>0?(sc/maxSPS):1;
+      hizbMap[k].scoreRatio=ratio;
+    }else{
+      hizbMap[k].hasFail=true;
+      hizbMap[k].scoreRatio=0;
+    }
   });
+
   var arr=Object.values(hizbMap);
-  var passed=0,failed=0;
-  arr.forEach(function(h){if(h.hasFail)failed+=unit;else if(h.hasPass)passed+=unit;});
-  var disp=arr.length*unit,rem=Math.max(0,exp-disp);
-  var maxSPS=20/div;
-  var ws=0;
-  record.sections.forEach(function(s){
-    if(!s||!s.partNumber||!s.isPassed)return;
-    var pn=Number(s.partNumber);if(!pn||pn<1||pn>30)return;
-    var hz=div===1?1:Number(s.hizb||1);if(hz<1||hz>div)return;
-    var sc=Number(s.score);ws+=isFinite(sc)?(sc/maxSPS):1;
+  var passed=0,failed=0,ws=0;
+  arr.forEach(function(h){
+    if(h.hasFail){
+      failed+=unit;
+      return;
+    }
+    if(h.hasPass){
+      passed+=unit;
+      ws+=Number(h.scoreRatio||0);
+    }
   });
+
+  var disp=arr.length*unit,rem=Math.max(0,exp-disp);
   var denom=exp*div;
   return{expectedParts:exp,displayedParts:disp,passedParts:passed,failedParts:failed,remainingParts:rem,
     coveragePercent:exp>0?(disp/exp)*100:0,passFromExpectedPercent:exp>0?(passed/exp)*100:0,
