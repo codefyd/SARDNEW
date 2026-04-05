@@ -3,6 +3,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -242,9 +243,9 @@
 <div class="page-wrap">
   <div class="card-sard animate-in">
     <div class="card-title"><i class="fas fa-magnifying-glass" style="color:var(--gold);"></i> الاستعلام عن نتيجة الطالب</div>
-    <p class="text-muted" style="margin-bottom:14px;">البحث عبر: <b>جوال ولي الأمر</b> أو <b>ID الهوية</b></p>
+    <p class="text-muted" style="margin-bottom:14px;">البحث عبر: <b>جوال ولي الأمر</b> أو <b>هوية الطالب </b> فقط</p>
     <div class="d-flex gap-2">
-      <input id="q" type="text" class="search-input" placeholder="أدخل جوال ولي الأمر أو ID الهوية" autocomplete="off"/>
+      <input id="q" type="text" class="search-input" placeholder="أدخل هوية الطالب أو جوال ولي الأمر" autocomplete="off"/>
       <button id="btn" class="btn-primary-sard" onclick="run()" style="white-space:nowrap;height:50px;">
         <i class="fas fa-search" id="ico"></i> بحث
       </button>
@@ -727,7 +728,7 @@ function setLoading(on){document.getElementById('ico').className=on?'fas fa-spin
 
 function run(){
   var raw=(document.getElementById('q').value||'').trim();
-  if(!raw){showEmpty('أدخل جوال ولي الأمر أو ID الهوية');return;}
+  if(!raw){showEmpty('أدخل هوية الطالب أو جوال ولي الأمر.');return;}
   document.getElementById('tabs').style.display='none';
   document.getElementById('out').innerHTML='';
   setLoading(true);
@@ -738,7 +739,7 @@ function run(){
 
 function handleResp(resp){
   updateSearchCounter(resp && resp.stats ? resp.stats : null);
-  if(!resp||!resp.ok||!Array.isArray(resp.results)||!resp.results.length){showEmpty('لم يُعثَر على نتيجة. تحقق من الرقم أو الـ ID.');return;}
+  if(!resp||!resp.ok||!Array.isArray(resp.results)||!resp.results.length){showEmpty('لم يُعثَر على نتيجة. تحقق من هوية الطالب أو جوال ولي الأمر فقط.');return;}
   window.__res=resp.results;
   if(resp.results.length>1){
     var t=document.getElementById('tabs');t.style.display='flex';
