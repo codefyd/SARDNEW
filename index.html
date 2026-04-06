@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -100,9 +101,11 @@
       padding:6px 0;
     }
 
+    .mobile-nav { display:none !important; }
+
     @media(max-width:640px) {
       .nav-links { display:none; }
-      .mobile-nav { display:flex; justify-content:space-around; }
+      .mobile-nav { display:flex !important; justify-content:space-around; }
     }
 
     .mob-btn {
@@ -325,6 +328,31 @@
       font-weight:600;
       cursor:pointer;
       transition:all .2s;
+    }
+
+    .icon-trash-btn {
+      width:38px;
+      height:38px;
+      border:none;
+      border-radius:50%;
+      background:var(--danger);
+      color:#fff;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:transform .15s, box-shadow .15s, background .2s;
+      box-shadow:0 4px 12px rgba(192,57,43,.22);
+    }
+
+    .icon-trash-btn:hover {
+      background:#a93226;
+      transform:translateY(-1px) scale(1.03);
+      box-shadow:0 8px 16px rgba(169,50,38,.28);
+    }
+
+    .icon-trash-btn:active {
+      transform:scale(.97);
     }
 
     .sel-btn {
@@ -641,7 +669,7 @@
     <button class="nav-link-btn" onclick="showView('attendance')" id="nb-attendance">
       <i class="fas fa-clipboard-check"></i> التحضير
     </button>
-    <button class="nav-link-btn" onclick="window.open('c/1.html','_blank')" id="nb-reports" style="display:none;">
+    <button class="nav-link-btn" onclick="window.open(buildReportUrl('c/1.html'),'_blank')" id="nb-reports" style="display:none;">
       <i class="fas fa-chart-bar"></i> التقارير
     </button>
     <button class="nav-link-btn" onclick="showView('settings')" id="nb-settings">
@@ -664,7 +692,7 @@
   <button class="mob-btn" onclick="showView('attendance')" id="mb-attendance">
     <i class="fas fa-clipboard-check"></i><span>التحضير</span>
   </button>
-  <button class="mob-btn" onclick="window.open('c/1.html','_blank')" id="mb-reports" style="display:none;">
+  <button class="mob-btn" onclick="window.open(buildReportUrl('c/1.html'),'_blank')" id="mb-reports" style="display:none;">
     <i class="fas fa-chart-bar"></i><span>التقارير</span>
   </button>
   <button class="mob-btn" onclick="showView('settings')" id="mb-settings">
@@ -768,7 +796,7 @@
       <i class="fas fa-lock" style="font-size:3rem;color:var(--primary);margin-bottom:12px;"></i>
       <h3 style="font-weight:700;color:var(--primary);margin-bottom:8px;">التحضير مقفل</h3>
       <p class="text-muted" style="margin-bottom:16px;">أدخل رمز الدخول للمتابعة</p>
-      <input type="password" id="attCodeInput" class="form-control" placeholder="رمز الدخول..." style="max-width:280px;margin:0 auto 12px;"/>
+      <input type="password" id="attCodeInput" class="form-control" placeholder="رمز الدخول..." style="max-width:280px;margin:0 auto 12px;" onkeydown="if(event.key==='Enter')unlockAttendance()"/>
       <button class="btn-primary-sard" onclick="unlockAttendance()"><i class="fas fa-unlock"></i> فتح التحضير</button>
     </div>
 
@@ -809,7 +837,7 @@
       <i class="fas fa-lock" style="font-size:3rem;color:var(--primary);margin-bottom:12px;"></i>
       <h3 style="font-weight:700;color:var(--primary);margin-bottom:8px;">الإعدادات مقفلة</h3>
       <p class="text-muted" style="margin-bottom:16px;">أدخل رمز المدير للمتابعة</p>
-      <input type="password" id="settingsCodeInput" class="form-control" placeholder="رمز الدخول..." style="max-width:280px;margin:0 auto 12px;"/>
+      <input type="password" id="settingsCodeInput" class="form-control" placeholder="رمز الدخول..." style="max-width:280px;margin:0 auto 12px;" onkeydown="if(event.key==='Enter')unlockSettings()"/>
       <button class="btn-primary-sard" onclick="unlockSettings()"><i class="fas fa-unlock"></i> فتح الإعدادات</button>
     </div>
 
@@ -920,6 +948,18 @@
             <div class="toggle-knob"></div>
           </label>
         </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">إظهار زر حذف المقطع</div>
+            <div class="setting-desc">يُظهر زر حذف تسجيل المقطع داخل وضع التعديل بعد حفظه</div>
+          </div>
+          <label class="toggle-wrap">
+            <input type="checkbox" id="s-showDeleteSection" />
+            <div class="toggle-track"></div>
+            <div class="toggle-knob"></div>
+          </label>
+        </div>
       </div>
 
       <div class="card-sard animate-in">
@@ -963,16 +1003,16 @@
         <div class="card-title"><i class="fas fa-chart-bar"></i> التقارير</div>
         <p class="text-muted" style="font-size:.85rem;margin-bottom:14px;">فتح صفحات التقارير في تبويب جديد</p>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <a href="c/1.html" target="_blank" class="btn-primary-sard" style="justify-content:flex-start;text-decoration:none;">
+          <a href="javascript:void(0)" onclick="window.open(buildReportUrl('c/1.html'),'_blank')" target="_blank" class="btn-primary-sard" style="justify-content:flex-start;text-decoration:none;">
             <i class="fas fa-mosque"></i> تقرير المجمع والحلق
           </a>
-          <a href="c/2.html" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
+          <a href="javascript:void(0)" onclick="window.open(buildReportUrl('c/2.html'),'_blank')" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
             <i class="fas fa-list-alt"></i> تقرير الحلق التفصيلي
           </a>
-          <a href="c/4.html" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
+          <a href="javascript:void(0)" onclick="window.open(buildReportUrl('c/4.html'),'_blank')" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
             <i class="fas fa-list-alt"></i> صفحة التكريم
           </a>
-          <a href="c/3.html" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
+          <a href="javascript:void(0)" onclick="window.open(buildReportUrl('c/3.html'),'_blank')" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
             <i class="fas fa-search"></i> استعلام نتائج الطلاب
           </a>
         </div>
@@ -997,7 +1037,12 @@
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbxfAz3YTvh9okkdxDkqjet_mlrK19ngI1KG1CCJObmIYE1_Ao2qKQHpyIqO9eTCFOjRZA/exec";
+const API = "https://script.google.com/macros/s/AKfycbzUcnpxuZxXDgks1FaZqmo8XN--MaYcCZWFLVuRW5q7HsY93gjG3ff2Qps_ew6Nbql5/exec";
+try { localStorage.setItem('sard_api_url', API); } catch(_e) {}
+function buildReportUrl(path) {
+  try { localStorage.setItem('sard_api_url', API); } catch(_e) {}
+  return path + (path.indexOf('?') === -1 ? '?' : '&') + 'api=' + encodeURIComponent(API);
+}
 
 function _buildUrl(action, params = {}) {
   const url = new URL(API);
@@ -1140,9 +1185,17 @@ function showApp() {
   document.getElementById('loginWrap').style.display = 'none';
   document.getElementById('appWrap').style.display = 'block';
   document.getElementById('mainNav').style.display = 'flex';
-  document.getElementById('mobileNav').style.display = 'flex';
+  syncResponsiveNav();
   document.getElementById('navTeacher').textContent = STATE.teacher;
 }
+
+function syncResponsiveNav() {
+  const mobileNav = document.getElementById('mobileNav');
+  if (!mobileNav) return;
+  mobileNav.style.display = window.innerWidth <= 640 ? 'flex' : 'none';
+}
+
+window.addEventListener('resize', syncResponsiveNav);
 
 function loadData() {
   showSpinner();
@@ -1544,7 +1597,8 @@ function getEffectiveSettings(student) {
     warningDeduction: tc && tc.warningDeduction != null ? Number(tc.warningDeduction) : Number(s.warningDeduction || 0.25),
     passingScorePerSection: tc && tc.passingScorePerSection ? Number(tc.passingScorePerSection) : Number(s.passingScorePerSection || 7),
     requireFailReason: !!s.requireFailReason,
-    editSectionsCode: s.editSectionsCode || ''
+    editSectionsCode: s.editSectionsCode || '',
+    showDeleteSectionButton: !!s.showDeleteSectionButton
   };
 }
 
@@ -1625,9 +1679,11 @@ function renderSections() {
             <div class="score-circle ${isPassed ? 'score-pass' : 'score-fail'}" style="width:48px;height:48px;font-size:1rem;">
               ${escapeHtml(String(sec.score ?? 0))}
             </div>
-            <button class="btn-outline-sard" style="padding:5px 10px;font-size:.8rem;" onclick="editSection(${idx})">
-              <i class="fas fa-edit"></i>
-            </button>
+            ${editAllowed ? `
+              <button class="btn-outline-sard" style="padding:5px 10px;font-size:.8rem;" onclick="editSection(${idx})" title="تعديل المقطع">
+                <i class="fas fa-edit"></i>
+              </button>
+            ` : ''}
           </div>
         </div>
         <div class="d-flex align-center gap-2 flex-wrap">
@@ -1645,13 +1701,20 @@ function renderSections() {
       const usedCombos = getUsedCombos(idx);
 
       card.innerHTML = `
-        <div class="d-flex justify-between align-center" style="margin-bottom:12px;">
+        <div class="d-flex justify-between align-center gap-2 flex-wrap" style="margin-bottom:12px;">
           <span class="badge-sard badge-prim">مقطع ${idx + 1}</span>
-          ${hasData
-            ? `<div class="score-circle ${passed ? 'score-pass' : 'score-fail'}" id="score-circle-${idx}">
-                ${escapeHtml(String(score))} <span style="font-size:.65rem;">/${escapeHtml(String(maxScore))}</span>
-               </div>`
-            : `<div class="score-circle" style="border-color:var(--border);color:var(--text-muted);" id="score-circle-${idx}">—</div>`}
+          <div class="d-flex align-center gap-2">
+            ${sec.wasSavedRead && eff.showDeleteSectionButton ? `
+              <button class="icon-trash-btn" onclick="deleteSavedSection(${idx})" title="حذف تسجيل المقطع" aria-label="حذف تسجيل المقطع">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            ` : ''}
+            ${hasData
+              ? `<div class="score-circle ${passed ? 'score-pass' : 'score-fail'}" id="score-circle-${idx}">
+                  ${escapeHtml(String(score))} <span style="font-size:.65rem;">/${escapeHtml(String(maxScore))}</span>
+                 </div>`
+              : `<div class="score-circle" style="border-color:var(--border);color:var(--text-muted);" id="score-circle-${idx}">—</div>`}
+          </div>
         </div>
 
         <div class="grid-2" style="margin-bottom:10px;">
@@ -1917,6 +1980,97 @@ function editSection(idx) {
     sec._editing = true;
     renderSections();
   }
+}
+
+function rebuildEvalSectionsFromSaved(student, eff, savedSections) {
+  const numSec = Math.ceil((Number(student.partsCount) || 0) * eff.partsDivisions);
+  STATE.evalSections = [];
+
+  for (let i = 0; i < numSec; i++) {
+    const saved = savedSections[i] || null;
+    if (saved && saved.partNumber) {
+      STATE.evalSections.push({ ...saved, wasSavedRead:true, _editing:false });
+    } else {
+      STATE.evalSections.push({
+        partNumber:'',
+        hizb:'',
+        mistakes:0,
+        warnings:0,
+        score:0,
+        isPassed:false,
+        failFace:'',
+        teacherName:STATE.teacher,
+        wasSavedRead:false,
+        _editing:true
+      });
+    }
+  }
+}
+
+function refreshCurrentStudentRecord() {
+  const student = STATE.evalRecord && STATE.evalRecord.student;
+  const eff = STATE.evalRecord && STATE.evalRecord.eff;
+  if (!student || !eff) return Promise.resolve();
+
+  return _apiGet('getRecords').then(recordsData => {
+    STATE.records = recordsData.records || [];
+    STATE.recordsLoaded = true;
+    const rec = STATE.records.find(r => r.studentId === student.id) || { studentId: student.id, sections: [] };
+    rebuildEvalSectionsFromSaved(student, eff, rec.sections || []);
+    renderStudentHistory(student, rec, eff);
+    renderSections();
+    updateKPI();
+  });
+}
+
+function deleteSavedSection(idx) {
+  const sec = STATE.evalSections[idx];
+  if (!sec || !sec.wasSavedRead) return;
+
+  Swal.fire({
+    icon:'warning',
+    title:'حذف تسجيل المقطع',
+    html:`سيتم حذف <b>تسجيل المقطع ${idx + 1}</b> مباشرة من السجل الحالي.`, 
+    showCancelButton:true,
+    confirmButtonText:'نعم، احذف',
+    cancelButtonText:'إلغاء',
+    confirmButtonColor:'#c0392b',
+    cancelButtonColor:'#014979'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    const student = STATE.evalRecord.student;
+    const today = new Date().toISOString().split('T')[0];
+    const nextSections = STATE.evalSections.map((item, i) => (i === idx ? {
+      partNumber:'',
+      hizb:'',
+      mistakes:0,
+      warnings:0,
+      score:0,
+      isPassed:false,
+      failFace:'',
+      teacherName:STATE.teacher,
+      wasSavedRead:false,
+      _editing:true
+    } : item));
+
+    showSpinner();
+    _apiPost('saveRecord', {
+      studentId: student.id,
+      teacherName: STATE.teacher,
+      date: today,
+      sections: nextSections
+    })
+      .then(() => refreshCurrentStudentRecord())
+      .then(() => {
+        hideSpinner();
+        showToast('تم حذف تسجيل المقطع', 'success');
+      })
+      .catch(err => {
+        hideSpinner();
+        showToast('تعذر حذف تسجيل المقطع: ' + (err.message || err), 'error');
+      });
+  });
 }
 
 // ===== بناء رسالة واتساب مع كل المتغيرات =====
@@ -2310,6 +2464,7 @@ function loadSettingsForm() {
     document.getElementById('s-activeTrack').value = s.activeTrackForSelection || '';
     document.getElementById('s-showReports').checked = !!s.showReportsButton;
     document.getElementById('s-lockFullFile').checked = !!s.lockFullFile;
+    document.getElementById('s-showDeleteSection').checked = !!s.showDeleteSectionButton;
     document.getElementById('s-lockCode').value = '';
     document.getElementById('s-editCode').value = '';
     document.getElementById('s-whatsapp').value = s.whatsappTemplate || '';
@@ -2345,6 +2500,7 @@ function doSaveSettings() {
     activeTrackForSelection: document.getElementById('s-activeTrack').value.trim(),
     showReportsButton: document.getElementById('s-showReports').checked,
     lockFullFile: document.getElementById('s-lockFullFile').checked,
+    showDeleteSectionButton: document.getElementById('s-showDeleteSection').checked,
     editSectionsCode: document.getElementById('s-editCode').value.trim(),
     whatsappTemplate: document.getElementById('s-whatsapp').value.trim()
   };
