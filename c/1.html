@@ -393,7 +393,7 @@ function buildSpecialTabsHtml(selectedStudents){
     }).join('');
   }
 
-  var exportBtnHtml = '<button class="btn-excel-sard" onclick="exportSpecialTab(\''+_specialTab+'\')"><i class="fas fa-file-export"></i> تصدير</button>';
+  var exportBtnHtml = '<button class="btn-excel-sard" onclick="exportSpecialTab(_specialTab)"><i class="fas fa-file-export"></i> تصدير</button>';
 
   return ''
     + '<div class="card-sard animate-in">'
