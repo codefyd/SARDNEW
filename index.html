@@ -668,10 +668,9 @@
     </button>
     <button class="nav-link-btn" onclick="showView('attendance')" id="nb-attendance">
       <i class="fas fa-clipboard-check"></i> التحضير
-    </button>
-    <button class="nav-link-btn" onclick="window.open(buildReportUrl('c/1.html'),'_blank')" id="nb-reports" style="display:none;">
-      <i class="fas fa-chart-bar"></i> التقارير
-    </button>
+    <button class="nav-link-btn" onclick="window.open('c/1.html','_blank')" id="nb-reports" style="display:none;">
+  <i class="fas fa-chart-bar"></i> التقارير
+</button>
     <button class="nav-link-btn" onclick="showView('settings')" id="nb-settings">
       <i class="fas fa-cog"></i> الإعدادات
     </button>
@@ -692,9 +691,9 @@
   <button class="mob-btn" onclick="showView('attendance')" id="mb-attendance">
     <i class="fas fa-clipboard-check"></i><span>التحضير</span>
   </button>
-  <button class="mob-btn" onclick="window.open(buildReportUrl('c/1.html'),'_blank')" id="mb-reports" style="display:none;">
-    <i class="fas fa-chart-bar"></i><span>التقارير</span>
-  </button>
+  <button class="mob-btn" onclick="window.open('c/1.html','_blank')" id="mb-reports" style="display:none;">
+  <i class="fas fa-chart-bar"></i><span>التقارير</span>
+</button>
   <button class="mob-btn" onclick="showView('settings')" id="mb-settings">
     <i class="fas fa-cog"></i><span>الإعدادات</span>
   </button>
@@ -1003,19 +1002,19 @@
         <div class="card-title"><i class="fas fa-chart-bar"></i> التقارير</div>
         <p class="text-muted" style="font-size:.85rem;margin-bottom:14px;">فتح صفحات التقارير في تبويب جديد</p>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <a href="javascript:void(0)" onclick="window.open(buildReportUrl('c/1.html'),'_blank')" target="_blank" class="btn-primary-sard" style="justify-content:flex-start;text-decoration:none;">
-            <i class="fas fa-mosque"></i> تقرير المجمع والحلق
-          </a>
-          <a href="javascript:void(0)" onclick="window.open(buildReportUrl('c/2.html'),'_blank')" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
-            <i class="fas fa-list-alt"></i> تقرير الحلق التفصيلي
-          </a>
-          <a href="javascript:void(0)" onclick="window.open(buildReportUrl('c/4.html'),'_blank')" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
-            <i class="fas fa-list-alt"></i> صفحة التكريم
-          </a>
-          <a href="javascript:void(0)" onclick="window.open(buildReportUrl('c/3.html'),'_blank')" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
-            <i class="fas fa-search"></i> استعلام نتائج الطلاب
-          </a>
-        </div>
+  <a href="c/1.html" target="_blank" class="btn-primary-sard" style="justify-content:flex-start;text-decoration:none;">
+    <i class="fas fa-mosque"></i> تقرير المجمع والحلق
+  </a>
+  <a href="c/2.html" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
+    <i class="fas fa-list-alt"></i> تقرير الحلق التفصيلي
+  </a>
+  <a href="c/4.html" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
+    <i class="fas fa-list-alt"></i> صفحة التكريم
+  </a>
+  <a href="c/3.html" target="_blank" class="btn-outline-sard" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
+    <i class="fas fa-search"></i> استعلام نتائج الطلاب
+  </a>
+</div>
       </div>
 
       <div class="card-sard animate-in">
@@ -1039,9 +1038,7 @@
 <script>
 const API = "https://script.google.com/macros/s/AKfycbxfAz3YTvh9okkdxDkqjet_mlrK19ngI1KG1CCJObmIYE1_Ao2qKQHpyIqO9eTCFOjRZA/exec";
 try { localStorage.setItem('sard_api_url', API); } catch(_e) {}
-function buildReportUrl(path) {
-    return path + (path.indexOf('?') === -1 ? '?' : '&') + 'api=' + encodeURIComponent(SCRIPT_API_URL);
-}
+
 
 
 function _buildUrl(action, params = {}) {
