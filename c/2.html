@@ -480,23 +480,57 @@ function selHalaqa(name){
   render();
 }
 function selStudent(id){_selSid=id;render();}
-function sendWA(){
-  var students=(_data&&_data.students)||[];
-  var summaryMap=(_data&&_data.summaryMap)||{};
-  var selSt=students.find(function(s){return s.id===_selSid;});
-  if(!selSt)return;
-  var stats=buildStats(selSt,summaryMap[selSt.id]||null);
-  var phone=normalizePhone(selSt.guardianPhone);
-  if(!phone){alert('لا يوجد رقم ولي أمر');return;}
-  var msg='السلام عليكم ورحمة الله وبركاته\n\nولي أمر الطالب: '+selSt.name
-    +'\n\nنتيجة عرض السرد:\nالأجزاء المفترضة: '+fN(stats.expectedParts)
-    +'\nالمعروضة: '+fN(stats.displayedParts)
-    +'\nالمجتازة: '+fN(stats.passedParts)
-    +'\nالرسوب: '+fN(stats.failedParts)
-    +'\nنسبة الطالب: '+fP(stats.studentPercent)+'%'
-    +'\n\nبارك الله في الجهود.';
-  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+
+function getReportWhatsappTemplate(){
+  var s = (_data && _data.settings) ? _data.settings : {};
+  return String(s.whatsappTemplate || '').trim();
 }
+
+function buildReportWhatsappMessage(selSt, stats){
+  var tpl = getReportWhatsappTemplate();
+  if(!tpl){
+    tpl = 'السلام عليكم، طالبنا {اسم_الطالب} في حلقة {الحلقة}، درجته {الدرجة}.';
+  }
+
+  var latestSections = Array.isArray(stats.latestSections) ? stats.latestSections : [];
+  var lastSec = latestSections.length ? latestSections[latestSections.length - 1] : {};
+  var totalScore = latestSections.reduce(function(acc, s){
+    return acc + Number((s && s.score) || 0);
+  }, 0);
+
+  var shownParts = Number(stats.displayedParts || 0);
+  var percent = shownParts > 0 ? Math.round((Number(totalScore || 0) / (shownParts * 20)) * 100) : 0;
+
+  return tpl
+    .replace(/{اسم_الطالب}/g, String(selSt.name || ''))
+    .replace(/{الحلقة}/g, String(selSt.halaqa || ''))
+    .replace(/{الدرجة}/g, String(lastSec.score || totalScore || 0))
+    .replace(/{المسمع}/g, String(lastSec.teacherName || ''))
+    .replace(/{اجزاء_مجتازة}/g, String(Number(stats.passedParts || 0)))
+    .replace(/{اجزاء_رسوب}/g, String(Number(stats.failedParts || 0)))
+    .replace(/{اجزاء_محفوظة}/g, String(Number(selSt.partsCount || 0)))
+    .replace(/{اجزاء_معروضة}/g, String(Number(stats.displayedParts || 0)))
+    .replace(/{النسبة}/g, String(percent) + '%');
+}
+
+function sendWA(){
+  var students = (_data && _data.students) || [];
+  var summaryMap = (_data && _data.summaryMap) || {};
+  var selSt = students.find(function(s){ return s.id === _selSid; });
+  if(!selSt) return;
+
+  var stats = buildStats(selSt, summaryMap[selSt.id] || null);
+  var phone = normalizePhone(selSt.guardianPhone);
+  if(!phone){
+    alert('لا يوجد رقم ولي أمر');
+    return;
+  }
+
+  var msg = buildReportWhatsappMessage(selSt, stats);
+  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+  
 loadData();
 </script>
 </body>
