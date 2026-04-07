@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -195,9 +191,6 @@ function setSpinner(id){document.getElementById(id).innerHTML='<div class="spinn
 
 /* ===============================================================
    buildMiniTable — يدعم div=1 و div=2 و div=4 بنفس الهيكل
-   الهيكل: صف رأس مزدوج — الصف الأول: [المسمّع | الجزء | قسم1 | قسم2 ...]
-            الصف الثاني: [خطأ | تنبيه | الدرجة | وجه] لكل قسم
-   div=1: لا يوجد قسم، تُعرض 4 أعمدة مباشرة تحت "الجزء كامل"
 =============================================================== */
 function buildMiniTable(sections, partsDivisions){
   if(!sections||!sections.length)return '<p class="text-muted" style="padding:16px;text-align:center;">لا توجد مقاطع مسجَّلة</p>';
@@ -316,7 +309,7 @@ function setRefreshText(msg){
 
 function normalizePhone(p){if(!p)return'';var d=String(p).replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);if(d.startsWith('966'))return d;if(d.startsWith('0'))return'966'+d.slice(1);return d;}
 
-function buildStats(student,summary){
+function buildStats(student, summary, sections){
   var exp=Number((summary&&summary.expectedParts)!=null?summary.expectedParts:(student&&student.partsCount)||0);
   return {
     expectedParts: exp,
@@ -328,7 +321,7 @@ function buildStats(student,summary){
     passFromExpectedPercent: Number(summary&&summary.passFromExpectedPercent||0),
     failPercent: Number(summary&&summary.failPercent||0),
     studentPercent: Number(summary&&summary.studentPercent||0),
-    latestSections: Array.isArray(summary&&summary.latestSections)?summary.latestSections:[]
+    latestSections: Array.isArray(sections) ? sections : []
   };
 }
 
@@ -345,14 +338,25 @@ function loadData(opts){
     setRefreshText(opts.manual ? 'جاري التحديث بالخلفية...' : 'تحديث تلقائي بالخلفية...');
   }
 
-  Promise.all([apiGet('initData'), apiGet('getStudents'), apiGet('getDailySummary')]).then(function(res){
-    var init=res[0]||{}, studentsData=res[1]||{}, summaryData=res[2]||{};
+  Promise.all([
+    apiGet('initData'), 
+    apiGet('getStudents'), 
+    apiGet('getDailySummary'),
+    apiGet('getRecords')
+  ]).then(function(res){
+    var init=res[0]||{}, studentsData=res[1]||{}, summaryData=res[2]||{}, recordsData=res[3]||{};
     var summaryMap={};
     Object.keys(summaryData.studentsByHalaqa||{}).forEach(function(hName){
       (summaryData.studentsByHalaqa[hName]||[]).forEach(function(st){
         if(st && st.id) summaryMap[st.id]=st;
       });
     });
+
+    var recordsMap={};
+    (recordsData.records||[]).forEach(function(r){
+      if(r && r.studentId) recordsMap[r.studentId] = r.sections || [];
+    });
+
     var nextData={
       settings:init.settings||{},
       trackConfigs:init.trackConfigs||[],
@@ -360,7 +364,8 @@ function loadData(opts){
       halaqas:studentsData.halaqas||[],
       students:studentsData.students||[],
       summary:summaryData,
-      summaryMap:summaryMap
+      summaryMap:summaryMap,
+      recordsMap:recordsMap
     };
 
     _data=nextData;
@@ -398,13 +403,13 @@ function render(opts){
   var inH=students.filter(function(s){return s.halaqa===_selH;});
   if(!_selSid&&inH.length)_selSid=inH[0].id;
   if(_selSid&&!inH.some(function(s){return s.id===_selSid;})&&inH.length)_selSid=inH[0].id;
+  
   var selSt=inH.find(function(s){return s.id===_selSid;})||null;
-  var selSummary=selSt?summaryMap[selSt.id]:null;
-  var stats=selSt?buildStats(selSt,selSummary):{expectedParts:0,displayedParts:0,passedParts:0,failedParts:0,remainingParts:0,coveragePercent:0,passFromExpectedPercent:0,failPercent:0,studentPercent:0,latestSections:[]};
+  var selSummary=selSt ? summaryMap[selSt.id] : null;
+  var selSections=selSt ? (_data.recordsMap[selSt.id] || []) : [];
+  var stats=selSt ? buildStats(selSt, selSummary, selSections) : {expectedParts:0,displayedParts:0,passedParts:0,failedParts:0,remainingParts:0,coveragePercent:0,passFromExpectedPercent:0,failPercent:0,studentPercent:0,latestSections:[]};
   var div=selSt?Number(selSt.partsDivisions||2)||2:2;
 
-
-  
   var halaqaChips=halaqas.map(function(h){
     var hn=h.name.replace(/'/g,"&#39;");
     return '<button class="sel-chip '+(_selH===h.name?'active':'')+'" onclick="selHalaqa(\''+hn+'\')">'+escH(h.name)+'</button>';
@@ -483,7 +488,7 @@ function selHalaqa(name){
 }
 function selStudent(id){_selSid=id;render();}
 
-  function getReportWhatsappTemplate(){
+function getReportWhatsappTemplate(){
   var s = (_data && _data.settings) ? _data.settings : {};
   return String(s.whatsappTemplate || '').trim();
 }
@@ -515,10 +520,11 @@ function buildReportWhatsappMessage(selSt, stats){
 function sendWA(){
   var students = (_data && _data.students) || [];
   var summaryMap = (_data && _data.summaryMap) || {};
+  var recordsMap = (_data && _data.recordsMap) || {};
   var selSt = students.find(function(s){ return s.id === _selSid; });
   if(!selSt) return;
 
-  var stats = buildStats(selSt, summaryMap[selSt.id] || null);
+  var stats = buildStats(selSt, summaryMap[selSt.id] || null, recordsMap[selSt.id] || []);
   var phone = normalizePhone(selSt.guardianPhone);
   if(!phone){
     alert('لا يوجد رقم ولي أمر');
