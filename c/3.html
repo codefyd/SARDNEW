@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -568,7 +561,6 @@ function getLookupWhatsappTemplate(){
   var s = (__initCache && __initCache.settings) ? __initCache.settings : {};
   return String(s.whatsappTemplate || '').trim();
 }
-
 function buildLookupWhatsappMessage(stu, sum, sections){
   var tpl = getLookupWhatsappTemplate();
   if(!tpl){
@@ -576,13 +568,23 @@ function buildLookupWhatsappMessage(stu, sum, sections){
   }
 
   sections = Array.isArray(sections) ? sections : [];
-  var totalSections = Number(sum.totalSections || sections.length || 0);
+
+  var div = Number(sum.partsDivisions || detDiv(sections) || 1);
+
+  var totalSections  = Number(sum.totalSections || sections.length || 0);
   var passedSections = Number(sum.passedSections || 0);
   var failedSections = Number(sum.failedSections || 0);
+
+  var shownParts  = partsValue(totalSections, div);
+  var passedParts = partsValue(passedSections, div);
+  var failedParts = partsValue(failedSections, div);
+
   var partsSaved = Number(stu.partsCount || 0);
-  var shownParts = partsValue(totalSections, Number(sum.partsDivisions || detDiv(sections) || 1));
   var totalScore = calcEffectiveTotalScore(sections);
-  var percent = shownParts > 0 ? Math.round((Number(totalScore || 0) / (shownParts * 20)) * 100) : 0;
+  var percent = shownParts > 0
+    ? Math.round((Number(totalScore || 0) / (shownParts * 20)) * 100)
+    : 0;
+
   var lastSec = sections.length ? sections[sections.length - 1] : {};
 
   return tpl
@@ -590,8 +592,8 @@ function buildLookupWhatsappMessage(stu, sum, sections){
     .replace(/{الحلقة}/g, String(stu.halaqa || ''))
     .replace(/{الدرجة}/g, String(lastSec.score || totalScore || 0))
     .replace(/{المسمع}/g, String(lastSec.teacherName || ''))
-    .replace(/{اجزاء_مجتازة}/g, String(passedSections))
-    .replace(/{اجزاء_رسوب}/g, String(failedSections))
+    .replace(/{اجزاء_مجتازة}/g, String(fPart(passedParts)))
+    .replace(/{اجزاء_رسوب}/g, String(fPart(failedParts)))
     .replace(/{اجزاء_محفوظة}/g, String(partsSaved))
     .replace(/{اجزاء_معروضة}/g, String(fPart(shownParts)))
     .replace(/{النسبة}/g, String(percent) + '%');
