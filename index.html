@@ -3,6 +3,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -644,7 +645,43 @@
     input[type="number"].native-input::-webkit-inner-spin-button {
       -webkit-appearance:none;
     }
-  </style>
+  
+
+    .codef-credit{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      margin:22px auto 10px;
+      padding:10px 14px;
+      font-size:.88rem;
+      color:var(--text-muted);
+      flex-wrap:wrap;
+    }
+
+    .codef-credit a{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      color:var(--primary);
+      text-decoration:none;
+      font-weight:800;
+      transition:all .2s ease;
+    }
+
+    .codef-credit a:hover{
+      color:var(--primary-dk);
+      transform:translateY(-1px);
+    }
+
+    .codef-credit img{
+      width:18px;
+      height:18px;
+      object-fit:contain;
+      display:block;
+    }
+
+</style>
 </head>
 <body>
 
@@ -2631,5 +2668,14 @@ function jsString(value) {
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<div class="codef-credit">
+  <span>صنع بواسطة</span>
+  <a href="https://codefyd.github.io/CODEF1/" target="_blank" rel="noopener noreferrer">
+    <img src="https://i.ibb.co/VyGwJgs/1561.png" alt="Codef Logo">
+    <span>codef</span>
+  </a>
+</div>
+
 </body>
 </html>
