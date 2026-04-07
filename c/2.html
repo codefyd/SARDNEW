@@ -388,21 +388,37 @@ function loadData(opts){
 }
 
 function render(opts){
-  opts=opts||{};
+  opts = opts || {};
   var savedScroll = opts.preserveScroll ? window.scrollY : 0;
-  if(!_data)return;
-  var halaqas=_data.halaqas||[];
-  var students=_data.students||[];
-  var summaryMap=_data.summaryMap||{};
-  if(!_selH&&halaqas.length)_selH=halaqas[0].name;
-  var inH=students.filter(function(s){return s.halaqa===_selH;});
-  if(!_selSid&&inH.length)_selSid=inH[0].id;
-  if(_selSid&&!inH.some(function(s){return s.id===_selSid;})&&inH.length)_selSid=inH[0].id;
-  var selSt=inH.find(function(s){return s.id===_selSid;})||null;
-  var selSummary=selSt?summaryMap[selSt.id]:null;
-  var stats=selSt?buildStats(selSt,selSummary):{expectedParts:0,displayedParts:0,passedParts:0,failedParts:0,remainingParts:0,coveragePercent:0,passFromExpectedPercent:0,failPercent:0,studentPercent:0,latestSections:[]};
-  var div=selSt?Number(selSt.partsDivisions||2)||2:2;
+  if(!_data) return;
 
+  var halaqas = _data.halaqas || [];
+  var students = _data.students || [];
+  var records = _data.records || [];
+  var summaryMap = _data.summaryMap || {};
+
+  if(!_selH && halaqas.length) _selH = halaqas[0].name;
+
+  var inH = students.filter(function(s){ return s.halaqa === _selH; });
+
+  if(!_selSid && inH.length) _selSid = inH[0].id;
+  if(_selSid && !inH.some(function(s){ return s.id === _selSid; }) && inH.length) _selSid = inH[0].id;
+
+  var selSt = inH.find(function(s){ return s.id === _selSid; }) || null;
+  var selSummary = selSt ? summaryMap[selSt.id] : null;
+  var rec = selSt ? records.find(function(r){ return r.studentId === selSt.id; }) : null;
+
+  var stats = selSt
+    ? buildStats(selSt, selSummary)
+    : {
+        expectedParts:0, displayedParts:0, passedParts:0, failedParts:0,
+        remainingParts:0, coveragePercent:0, passFromExpectedPercent:0,
+        failPercent:0, studentPercent:0, latestSections:[]
+      };
+
+  var div = selSt ? Number(selSt.partsDivisions || 2) || 2 : 2;
+
+  
   var halaqaChips=halaqas.map(function(h){
     var hn=h.name.replace(/'/g,"&#39;");
     return '<button class="sel-chip '+(_selH===h.name?'active':'')+'" onclick="selHalaqa(\''+hn+'\')">'+escH(h.name)+'</button>';
