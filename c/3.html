@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -222,7 +223,43 @@
     .print-cert-root .cert-wave-top{top:-36px !important;}
     .print-cert-root .cert-footer{margin-top:16px !important;}
     .print-cert-root .cert-footer-text{font-size:1.2rem !important;}
-  </style>
+  
+
+    .codef-credit{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      margin:22px auto 10px;
+      padding:10px 14px;
+      font-size:.88rem;
+      color:var(--text-muted);
+      flex-wrap:wrap;
+    }
+
+    .codef-credit a{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      color:var(--primary);
+      text-decoration:none;
+      font-weight:800;
+      transition:all .2s ease;
+    }
+
+    .codef-credit a:hover{
+      color:var(--primary-dk);
+      transform:translateY(-1px);
+    }
+
+    .codef-credit img{
+      width:18px;
+      height:18px;
+      object-fit:contain;
+      display:block;
+    }
+
+</style>
 </head>
 <body>
 
@@ -799,5 +836,14 @@ function setTab(i){
 function showEmpty(m){document.getElementById('out').innerHTML='<div class="card-sard" style="text-align:center;padding:32px;color:var(--text-muted);"><i class="fas fa-search" style="font-size:2rem;margin-bottom:8px;display:block;opacity:.3;"></i>'+escH(m)+'</div>';}
 function showError(m){document.getElementById('out').innerHTML='<div class="card-sard" style="text-align:center;padding:32px;color:var(--danger);">'+escH(m)+'</div>';}
 </script>
+
+<div class="codef-credit">
+  <span>صنع بواسطة</span>
+  <a href="https://codefyd.github.io/CODEF1/" target="_blank" rel="noopener noreferrer">
+    <img src="https://i.ibb.co/VyGwJgs/1561.png" alt="Codef Logo">
+    <span>codef</span>
+  </a>
+</div>
+
 </body>
 </html>
