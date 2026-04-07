@@ -1040,9 +1040,9 @@
 const API = "https://script.google.com/macros/s/AKfycbxfAz3YTvh9okkdxDkqjet_mlrK19ngI1KG1CCJObmIYE1_Ao2qKQHpyIqO9eTCFOjRZA/exec";
 try { localStorage.setItem('sard_api_url', API); } catch(_e) {}
 function buildReportUrl(path) {
-  try { localStorage.setItem('sard_api_url', API); } catch(_e) {}
-  return path + (path.indexOf('?') === -1 ? '?' : '&') + 'api=' + encodeURIComponent(API);
+    return path + (path.indexOf('?') === -1 ? '?' : '&') + 'api=' + encodeURIComponent(SCRIPT_API_URL);
 }
+
 
 function _buildUrl(action, params = {}) {
   const url = new URL(API);
