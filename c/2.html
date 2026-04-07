@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -315,51 +316,20 @@ function setRefreshText(msg){
 
 function normalizePhone(p){if(!p)return'';var d=String(p).replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);if(d.startsWith('966'))return d;if(d.startsWith('0'))return'966'+d.slice(1);return d;}
 
-function buildStats(student,record){
-  var exp=Number(student.partsCount||0);
-  if(!record||!Array.isArray(record.sections)||!record.sections.length)
-    return{expectedParts:exp,displayedParts:0,passedParts:0,failedParts:0,remainingParts:exp,coveragePercent:0,passFromExpectedPercent:0,failPercent:0,studentPercent:0};
-  var div=Number(student.partsDivisions||2)||2;
-  var unit=1/div;
-  var maxSPS=20/div;
-  var hizbMap={};
-
-  record.sections.forEach(function(s){
-    if(!s||!s.partNumber)return;
-    var pn=Number(s.partNumber);if(!pn||pn<1||pn>30)return;
-    var hz=div===1?1:Number(s.hizb||1);if(hz<1||hz>div)return;
-    var k=pn+'-'+hz;
-    if(!hizbMap[k])hizbMap[k]={hasPass:false,hasFail:false,scoreRatio:0};
-
-    if(s.isPassed){
-      hizbMap[k].hasPass=true;
-      var sc=Number(s.score);
-      var ratio=isFinite(sc)&&maxSPS>0?(sc/maxSPS):1;
-      hizbMap[k].scoreRatio=ratio;
-    }else{
-      hizbMap[k].hasFail=true;
-      hizbMap[k].scoreRatio=0;
-    }
-  });
-
-  var arr=Object.values(hizbMap);
-  var passed=0,failed=0,ws=0;
-  arr.forEach(function(h){
-    if(h.hasFail){
-      failed+=unit;
-      return;
-    }
-    if(h.hasPass){
-      passed+=unit;
-      ws+=Number(h.scoreRatio||0);
-    }
-  });
-
-  var disp=arr.length*unit,rem=Math.max(0,exp-disp);
-  var denom=exp*div;
-  return{expectedParts:exp,displayedParts:disp,passedParts:passed,failedParts:failed,remainingParts:rem,
-    coveragePercent:exp>0?(disp/exp)*100:0,passFromExpectedPercent:exp>0?(passed/exp)*100:0,
-    failPercent:disp>0?(failed/disp)*100:0,studentPercent:denom>0?(ws/denom)*100:0};
+function buildStats(student,summary){
+  var exp=Number((summary&&summary.expectedParts)!=null?summary.expectedParts:(student&&student.partsCount)||0);
+  return {
+    expectedParts: exp,
+    displayedParts: Number(summary&&summary.displayedParts||0),
+    passedParts: Number(summary&&summary.passedParts||0),
+    failedParts: Number(summary&&summary.failedParts||0),
+    remainingParts: Number(summary&&summary.remainingParts||Math.max(0, exp)),
+    coveragePercent: Number(summary&&summary.coveragePercent||0),
+    passFromExpectedPercent: Number(summary&&summary.passFromExpectedPercent||0),
+    failPercent: Number(summary&&summary.failPercent||0),
+    studentPercent: Number(summary&&summary.studentPercent||0),
+    latestSections: Array.isArray(summary&&summary.latestSections)?summary.latestSections:[]
+  };
 }
 
 function loadData(opts){
@@ -375,15 +345,22 @@ function loadData(opts){
     setRefreshText(opts.manual ? 'جاري التحديث بالخلفية...' : 'تحديث تلقائي بالخلفية...');
   }
 
-  Promise.all([apiGet('initData'), apiGet('getStudents')]).then(function(res){
-    var init=res[0]||{}, studentsData=res[1]||{};
+  Promise.all([apiGet('initData'), apiGet('getStudents'), apiGet('getDailySummary')]).then(function(res){
+    var init=res[0]||{}, studentsData=res[1]||{}, summaryData=res[2]||{};
+    var summaryMap={};
+    Object.keys(summaryData.studentsByHalaqa||{}).forEach(function(hName){
+      (summaryData.studentsByHalaqa[hName]||[]).forEach(function(st){
+        if(st && st.id) summaryMap[st.id]=st;
+      });
+    });
     var nextData={
       settings:init.settings||{},
       trackConfigs:init.trackConfigs||[],
       complex:init.complex||{},
       halaqas:studentsData.halaqas||[],
       students:studentsData.students||[],
-      records:(_data&&Array.isArray(_data.records))?_data.records:[]
+      summary:summaryData,
+      summaryMap:summaryMap
     };
 
     _data=nextData;
@@ -394,14 +371,10 @@ function loadData(opts){
       if(_selSid&&!inH.some(function(s){return s.id===_selSid;})&&inH.length)_selSid=inH[0].id;
     }
 
-    render({preserveScroll:isBackground});
-    return apiGet('getRecords');
-  }).then(function(recordsData){
-    _data.records=(recordsData&&recordsData.records)||[];
     _lastUpdatedAt=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    render({preserveScroll:true});
+    render({preserveScroll:isBackground});
     _isFirstLoad=false;
-    setRefreshText('آخر تحديث ' + _lastUpdatedAt + ' • يعمل بالخلفية');
+    setRefreshText('آخر تحديث ' + _lastUpdatedAt + ' • مطابق لملخص السيرفر');
   }).catch(function(e){
     if(!_data || !isBackground){
       document.getElementById('app').innerHTML='<div class="card-sard" style="text-align:center;padding:32px;color:var(--danger);"><i class="fas fa-exclamation-circle" style="font-size:2rem;margin-bottom:8px;display:block;"></i>خطأ: '+escH(e.message||String(e))+'</div>';
@@ -420,14 +393,14 @@ function render(opts){
   if(!_data)return;
   var halaqas=_data.halaqas||[];
   var students=_data.students||[];
-  var records=_data.records||[];
+  var summaryMap=_data.summaryMap||{};
   if(!_selH&&halaqas.length)_selH=halaqas[0].name;
   var inH=students.filter(function(s){return s.halaqa===_selH;});
   if(!_selSid&&inH.length)_selSid=inH[0].id;
   if(_selSid&&!inH.some(function(s){return s.id===_selSid;})&&inH.length)_selSid=inH[0].id;
   var selSt=inH.find(function(s){return s.id===_selSid;})||null;
-  var rec=selSt?records.find(function(r){return r.studentId===selSt.id;}):null;
-  var stats=selSt?buildStats(selSt,rec):{expectedParts:0,displayedParts:0,passedParts:0,failedParts:0,remainingParts:0,coveragePercent:0,passFromExpectedPercent:0,failPercent:0,studentPercent:0};
+  var selSummary=selSt?summaryMap[selSt.id]:null;
+  var stats=selSt?buildStats(selSt,selSummary):{expectedParts:0,displayedParts:0,passedParts:0,failedParts:0,remainingParts:0,coveragePercent:0,passFromExpectedPercent:0,failPercent:0,studentPercent:0,latestSections:[]};
   var div=selSt?Number(selSt.partsDivisions||2)||2:2;
 
   var halaqaChips=halaqas.map(function(h){
@@ -491,7 +464,7 @@ function render(opts){
       ? studentInfo
         +'<div class="card-sard animate-in">'
         +'<div class="card-title"><i class="fas fa-list-check" style="color:var(--gold);"></i> تفاصيل المقاطع المسمَّعة</div>'
-        +buildMiniTable(rec&&Array.isArray(rec.sections)?rec.sections:[],div)
+        +buildMiniTable(stats.latestSections||[],div)
         +'</div>'
       :'');
 
@@ -509,11 +482,10 @@ function selHalaqa(name){
 function selStudent(id){_selSid=id;render();}
 function sendWA(){
   var students=(_data&&_data.students)||[];
-  var records=(_data&&_data.records)||[];
+  var summaryMap=(_data&&_data.summaryMap)||{};
   var selSt=students.find(function(s){return s.id===_selSid;});
   if(!selSt)return;
-  var rec=records.find(function(r){return r.studentId===selSt.id;});
-  var stats=buildStats(selSt,rec);
+  var stats=buildStats(selSt,summaryMap[selSt.id]||null);
   var phone=normalizePhone(selSt.guardianPhone);
   if(!phone){alert('لا يوجد رقم ولي أمر');return;}
   var msg='السلام عليكم ورحمة الله وبركاته\n\nولي أمر الطالب: '+selSt.name
