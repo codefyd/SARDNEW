@@ -480,7 +480,6 @@ function selHalaqa(name){
   render();
 }
 function selStudent(id){_selSid=id;render();}
-
 function getReportWhatsappTemplate(){
   var s = (_data && _data.settings) ? _data.settings : {};
   return String(s.whatsappTemplate || '').trim();
@@ -541,8 +540,6 @@ function sendWA(){
   var msg = buildReportWhatsappMessage(selSt, stats);
   window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
 }
-
-
   
 loadData();
 </script>
