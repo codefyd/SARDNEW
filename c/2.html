@@ -486,6 +486,15 @@ function getReportWhatsappTemplate(){
   return String(s.whatsappTemplate || '').trim();
 }
 
+function calcReportScoreFromLatestSections(latestSections){
+  latestSections = Array.isArray(latestSections) ? latestSections : [];
+  return latestSections.reduce(function(acc, s){
+    if(!s || !s.isPassed) return acc;
+    var score = Number(s.score || 0);
+    return acc + (isFinite(score) ? score : 0);
+  }, 0);
+}
+
 function buildReportWhatsappMessage(selSt, stats){
   var tpl = getReportWhatsappTemplate();
   if(!tpl){
@@ -494,22 +503,25 @@ function buildReportWhatsappMessage(selSt, stats){
 
   var latestSections = Array.isArray(stats.latestSections) ? stats.latestSections : [];
   var lastSec = latestSections.length ? latestSections[latestSections.length - 1] : {};
-  var totalScore = latestSections.reduce(function(acc, s){
-    return acc + Number((s && s.score) || 0);
-  }, 0);
 
-  var shownParts = Number(stats.displayedParts || 0);
-  var percent = shownParts > 0 ? Math.round((Number(totalScore || 0) / (shownParts * 20)) * 100) : 0;
+  var displayedParts = Number(stats.displayedParts || 0);
+  var passedParts    = Number(stats.passedParts || 0);
+  var failedParts    = Number(stats.failedParts || 0);
+
+  var totalScore = calcReportScoreFromLatestSections(latestSections);
+  var percent = displayedParts > 0
+    ? Math.round((totalScore / (displayedParts * 20)) * 100)
+    : 0;
 
   return tpl
     .replace(/{اسم_الطالب}/g, String(selSt.name || ''))
     .replace(/{الحلقة}/g, String(selSt.halaqa || ''))
     .replace(/{الدرجة}/g, String(lastSec.score || totalScore || 0))
     .replace(/{المسمع}/g, String(lastSec.teacherName || ''))
-    .replace(/{اجزاء_مجتازة}/g, String(Number(stats.passedParts || 0)))
-    .replace(/{اجزاء_رسوب}/g, String(Number(stats.failedParts || 0)))
+    .replace(/{اجزاء_مجتازة}/g, String(passedParts))
+    .replace(/{اجزاء_رسوب}/g, String(failedParts))
     .replace(/{اجزاء_محفوظة}/g, String(Number(selSt.partsCount || 0)))
-    .replace(/{اجزاء_معروضة}/g, String(Number(stats.displayedParts || 0)))
+    .replace(/{اجزاء_معروضة}/g, String(displayedParts))
     .replace(/{النسبة}/g, String(percent) + '%');
 }
 
@@ -529,6 +541,7 @@ function sendWA(){
   var msg = buildReportWhatsappMessage(selSt, stats);
   window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
 }
+
 
   
 loadData();
