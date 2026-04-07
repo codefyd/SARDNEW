@@ -564,18 +564,55 @@ function renderCard(r,idx){
 
 function normalizePhone(p){if(!p)return'';var d=String(p).replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);if(d.startsWith('966'))return d;if(d.startsWith('0'))return'966'+d.slice(1);return d;}
 
+function getLookupWhatsappTemplate(){
+  var s = (__initCache && __initCache.settings) ? __initCache.settings : {};
+  return String(s.whatsappTemplate || '').trim();
+}
+
+function buildLookupWhatsappMessage(stu, sum, sections){
+  var tpl = getLookupWhatsappTemplate();
+  if(!tpl){
+    tpl = 'السلام عليكم، طالبنا {اسم_الطالب} في حلقة {الحلقة}، درجته {الدرجة}.';
+  }
+
+  sections = Array.isArray(sections) ? sections : [];
+  var totalSections = Number(sum.totalSections || sections.length || 0);
+  var passedSections = Number(sum.passedSections || 0);
+  var failedSections = Number(sum.failedSections || 0);
+  var partsSaved = Number(stu.partsCount || 0);
+  var shownParts = partsValue(totalSections, Number(sum.partsDivisions || detDiv(sections) || 1));
+  var totalScore = calcEffectiveTotalScore(sections);
+  var percent = shownParts > 0 ? Math.round((Number(totalScore || 0) / (shownParts * 20)) * 100) : 0;
+  var lastSec = sections.length ? sections[sections.length - 1] : {};
+
+  return tpl
+    .replace(/{اسم_الطالب}/g, String(stu.name || ''))
+    .replace(/{الحلقة}/g, String(stu.halaqa || ''))
+    .replace(/{الدرجة}/g, String(lastSec.score || totalScore || 0))
+    .replace(/{المسمع}/g, String(lastSec.teacherName || ''))
+    .replace(/{اجزاء_مجتازة}/g, String(passedSections))
+    .replace(/{اجزاء_رسوب}/g, String(failedSections))
+    .replace(/{اجزاء_محفوظة}/g, String(partsSaved))
+    .replace(/{اجزاء_معروضة}/g, String(fPart(shownParts)))
+    .replace(/{النسبة}/g, String(percent) + '%');
+}
+
 function doWA(idx){
-  var r=(window.__res||[])[idx];if(!r)return;
-  var stu=r.student||{};var sum=r.summary||{};var sections=Array.isArray(r.sections)?r.sections:[];
-  var totalScore=calcEffectiveTotalScore(sections);
-  var phone=normalizePhone(stu.guardianPhone);if(!phone){alert('لا يوجد رقم ولي أمر');return;}
-  var msg='السلام عليكم ورحمة الله وبركاته\n\nولي أمر الطالب: '+(stu.name||'')
-    +'\n\nنتيجة عرض السرد:\nعدد المقاطع: '+(sum.totalSections||0)
-    +'\nالمجتاز: '+(sum.passedSections||0)
-    +'\nالرسوب: '+(sum.failedSections||0)
-    +'\nمجموع الدرجات: '+fP(totalScore)
-    +'\n\nبارك الله في الجهود.';
-  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+  var r = (window.__res || [])[idx];
+  if(!r) return;
+
+  var stu = r.student || {};
+  var sum = r.summary || {};
+  var sections = Array.isArray(r.sections) ? r.sections : [];
+  var phone = normalizePhone(stu.guardianPhone);
+
+  if(!phone){
+    alert('لا يوجد رقم ولي أمر');
+    return;
+  }
+
+  var msg = buildLookupWhatsappMessage(stu, sum, sections);
+  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 /* =====================================================
