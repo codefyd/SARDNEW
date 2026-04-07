@@ -480,18 +480,10 @@ function selHalaqa(name){
   render();
 }
 function selStudent(id){_selSid=id;render();}
-function getReportWhatsappTemplate(){
+
+  function getReportWhatsappTemplate(){
   var s = (_data && _data.settings) ? _data.settings : {};
   return String(s.whatsappTemplate || '').trim();
-}
-
-function calcReportScoreFromLatestSections(latestSections){
-  latestSections = Array.isArray(latestSections) ? latestSections : [];
-  return latestSections.reduce(function(acc, s){
-    if(!s || !s.isPassed) return acc;
-    var score = Number(s.score || 0);
-    return acc + (isFinite(score) ? score : 0);
-  }, 0);
 }
 
 function buildReportWhatsappMessage(selSt, stats){
@@ -506,17 +498,11 @@ function buildReportWhatsappMessage(selSt, stats){
   var displayedParts = Number(stats.displayedParts || 0);
   var passedParts    = Number(stats.passedParts || 0);
   var failedParts    = Number(stats.failedParts || 0);
-
-  var totalScore = calcReportScoreFromLatestSections(latestSections);
-  var percent = displayedParts > 0
-    ? Math.round((totalScore / (displayedParts * 20)) * 100)
-    : 0;
+  var percent        = Math.round(Number(stats.studentPercent || 0));
 
   return tpl
     .replace(/{اسم_الطالب}/g, String(selSt.name || ''))
     .replace(/{الحلقة}/g, String(selSt.halaqa || ''))
-    .replace(/{الدرجة}/g, String(lastSec.score || totalScore || 0))
-    .replace(/{المسمع}/g, String(lastSec.teacherName || ''))
     .replace(/{اجزاء_مجتازة}/g, String(passedParts))
     .replace(/{اجزاء_رسوب}/g, String(failedParts))
     .replace(/{اجزاء_محفوظة}/g, String(Number(selSt.partsCount || 0)))
