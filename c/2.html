@@ -464,7 +464,7 @@ function render(opts){
       ? studentInfo
         +'<div class="card-sard animate-in">'
         +'<div class="card-title"><i class="fas fa-list-check" style="color:var(--gold);"></i> تفاصيل المقاطع المسمَّعة</div>'
-        +buildMiniTable(stats.latestSections||[],div)
+        +buildMiniTable(rec && Array.isArray(rec.sections) ? rec.sections : [], div)
         +'</div>'
       :'');
 
